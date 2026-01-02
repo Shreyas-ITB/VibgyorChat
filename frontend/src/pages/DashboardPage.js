@@ -267,6 +267,17 @@ export const DashboardPage = () => {
             onSelectConversation={setSelectedConversation}
             currentUser={user}
           />
+            </>
+          )}
+          
+          {/* Collapse/Expand Button */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="absolute top-4 -right-3 z-10 p-1.5 bg-vibgyor-orange text-white rounded-full shadow-lg hover:bg-vibgyor-orange-dark transition-colors"
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
         </div>
 
         {/* Chat view */}
