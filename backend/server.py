@@ -27,7 +27,14 @@ UPLOADS_DIR = ROOT_DIR / 'uploads'
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(
+    title="Vibgyor Chats API",
+    description="Professional chat application API for interior design teams",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
