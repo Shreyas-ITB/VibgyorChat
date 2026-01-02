@@ -33,8 +33,12 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Socket.IO for WebSocket connections
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
-socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
+sio = socketio.AsyncServer(
+    async_mode='asgi',
+    cors_allowed_origins='*',
+    logger=True,
+    engineio_logger=True
+)
 
 # WebSocket connection manager
 active_connections: Dict[str, str] = {}  # user_id -> sid
