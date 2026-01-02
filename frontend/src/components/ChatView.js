@@ -178,9 +178,22 @@ export const ChatView = ({ conversation, currentUser }) => {
   const handleFileUpload = async (files) => {
     if (files.length === 0) return;
     
+    const file = files[0];
+    
+    // If it's an image or video, show caption dialog
+    if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+      setPendingFile(file);
+      setShowCaptionDialog(true);
+      return;
+    }
+    
+    // For other files, upload directly
+    await uploadFile(file, '');
+  };
+
+  const uploadFile = async (file, caption) => {
     setUploading(true);
     try {
-      const file = files[0];
       const formData = new FormData();
       formData.append('file', file);
 
@@ -196,15 +209,17 @@ export const ChatView = ({ conversation, currentUser }) => {
 
       const response = await axios.post(`${API}/messages/send`, {
         conversation_id: conversation.conversation_id,
-        content: file.name,
+        content: caption || file.name,
         type: fileType,
         file_url: fileUrl
       }, { withCredentials: true });
 
-      // Add message to local state
       setMessages(prev => [...prev, response.data]);
-
       toast.success('File uploaded');
+      
+      setShowCaptionDialog(false);
+      setImageCaption('');
+      setPendingFile(null);
     } catch (error) {
       console.error('Error uploading file:', error);
       toast.error('Failed to upload file');
