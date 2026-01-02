@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { MessageSquare, Users, Sun, Moon, LogOut, Search, Plus, X } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { SocketProvider } from '../contexts/SocketContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ChatList } from '../components/ChatList';
@@ -142,9 +143,12 @@ export const DashboardPage = () => {
             className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
             data-testid="profile-button"
           >
-            <div className="w-12 h-12 rounded-full bg-vibgyor-orange flex items-center justify-center font-heading text-xl font-bold shadow-lg">
-              {user.name?.charAt(0).toUpperCase()}
-            </div>
+            <Avatar className="w-12 h-12 shadow-lg ring-2 ring-white/20">
+              <AvatarImage src={user.picture} alt={user.name} />
+              <AvatarFallback className="bg-vibgyor-orange text-white font-heading text-xl font-bold">
+                {user.name?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
           </button>
 
           <div className="flex-1 flex flex-col gap-4">

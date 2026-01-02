@@ -54,27 +54,36 @@ export const ChatView = ({ conversation, currentUser }) => {
 
   // Socket event handlers
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !conversation) return;
 
-    socket.on('new_message', (message) => {
+    const handleNewMessage = (message) => {
+      console.log('New message received:', message);
       if (message.conversation_id === conversation.conversation_id) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          // Check if message already exists
+          const exists = prev.some(m => m.message_id === message.message_id);
+          if (exists) return prev;
+          return [...prev, message];
+        });
       }
-    });
+    };
 
-    socket.on('message_edited', (message) => {
+    const handleMessageEdited = (message) => {
+      console.log('Message edited:', message);
       setMessages(prev => prev.map(m => m.message_id === message.message_id ? message : m));
-    });
+    };
 
-    socket.on('message_deleted', (data) => {
+    const handleMessageDeleted = (data) => {
+      console.log('Message deleted:', data);
       setMessages(prev => prev.filter(m => m.message_id !== data.message_id));
-    });
+    };
 
-    socket.on('message_reaction', (message) => {
+    const handleMessageReaction = (message) => {
+      console.log('Message reaction:', message);
       setMessages(prev => prev.map(m => m.message_id === message.message_id ? message : m));
-    });
+    };
 
-    socket.on('user_typing', (data) => {
+    const handleUserTyping = (data) => {
       if (data.user_id !== currentUser.user_id) {
         if (data.is_typing) {
           setTypingUsers(prev => [...new Set([...prev, data.user_id])]);
@@ -82,14 +91,20 @@ export const ChatView = ({ conversation, currentUser }) => {
           setTypingUsers(prev => prev.filter(id => id !== data.user_id));
         }
       }
-    });
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('message_edited', handleMessageEdited);
+    socket.on('message_deleted', handleMessageDeleted);
+    socket.on('message_reaction', handleMessageReaction);
+    socket.on('user_typing', handleUserTyping);
 
     return () => {
-      socket.off('new_message');
-      socket.off('message_edited');
-      socket.off('message_deleted');
-      socket.off('message_reaction');
-      socket.off('user_typing');
+      socket.off('new_message', handleNewMessage);
+      socket.off('message_edited', handleMessageEdited);
+      socket.off('message_deleted', handleMessageDeleted);
+      socket.off('message_reaction', handleMessageReaction);
+      socket.off('user_typing', handleUserTyping);
     };
   }, [socket, conversation, currentUser]);
 
@@ -102,18 +117,28 @@ export const ChatView = ({ conversation, currentUser }) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
+    const messageContent = newMessage;
+    setNewMessage(''); // Clear input immediately for better UX
+
     try {
-      await axios.post(`${API}/messages/send`, {
+      const response = await axios.post(`${API}/messages/send`, {
         conversation_id: conversation.conversation_id,
-        content: newMessage,
+        content: messageContent,
         type: 'text'
       }, { withCredentials: true });
 
-      setNewMessage('');
+      // Add message to local state immediately
+      setMessages(prev => {
+        const exists = prev.some(m => m.message_id === response.data.message_id);
+        if (exists) return prev;
+        return [...prev, response.data];
+      });
+
       sendTyping(conversation.conversation_id, false);
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
+      setNewMessage(messageContent); // Restore message on error
     }
   };
 
@@ -150,12 +175,15 @@ export const ChatView = ({ conversation, currentUser }) => {
       if (file.type.startsWith('image/')) fileType = 'image';
       else if (file.type.startsWith('video/')) fileType = 'video';
 
-      await axios.post(`${API}/messages/send`, {
+      const response = await axios.post(`${API}/messages/send`, {
         conversation_id: conversation.conversation_id,
         content: file.name,
         type: fileType,
         file_url: fileUrl
       }, { withCredentials: true });
+
+      // Add message to local state
+      setMessages(prev => [...prev, response.data]);
 
       toast.success('File uploaded');
     } catch (error) {
@@ -211,16 +239,48 @@ export const ChatView = ({ conversation, currentUser }) => {
   };
 
   const getConversationName = () => {
-    if (conversation.name) return conversation.name;
-    if (conversation.participant_details && conversation.participant_details.length > 0) {
-      return conversation.participant_details[0].name;
+    if (conversation.type === 'group' && conversation.name) {
+      return conversation.name;
     }
+    
+    // For direct chats, show the OTHER person's name
+    if (conversation.participant_details && conversation.participant_details.length > 0) {
+      const otherParticipants = conversation.participant_details.filter(
+        p => p.user_id !== currentUser.user_id
+      );
+      
+      if (otherParticipants.length > 0) {
+        return otherParticipants[0].name;
+      }
+    }
+    
     return 'Unknown';
+  };
+
+  const getConversationAvatar = () => {
+    if (conversation.type === 'group') {
+      return null;
+    }
+    
+    if (conversation.participant_details && conversation.participant_details.length > 0) {
+      const otherParticipants = conversation.participant_details.filter(
+        p => p.user_id !== currentUser.user_id
+      );
+      
+      if (otherParticipants.length > 0) {
+        return otherParticipants[0].picture;
+      }
+    }
+    
+    return null;
   };
 
   const filteredMessages = searchQuery
     ? messages.filter(msg => msg.content.toLowerCase().includes(searchQuery.toLowerCase()))
     : messages;
+
+  const conversationName = getConversationName();
+  const conversationAvatar = getConversationAvatar();
 
   return (
     <div className="h-full flex flex-col" data-testid="chat-view" {...getRootProps()}>
@@ -229,11 +289,15 @@ export const ChatView = ({ conversation, currentUser }) => {
       {/* Header */}
       <div className="bg-card border-b border-border p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-vibgyor-green text-white flex items-center justify-center font-medium">
-            {getConversationName().charAt(0).toUpperCase()}
+          <div className="w-10 h-10 rounded-full bg-vibgyor-green text-white flex items-center justify-center font-medium overflow-hidden">
+            {conversationAvatar ? (
+              <img src={conversationAvatar} alt={conversationName} className="w-full h-full object-cover" />
+            ) : (
+              conversationName.charAt(0).toUpperCase()
+            )}
           </div>
           <div>
-            <h3 className="font-medium text-foreground" data-testid="chat-header-name">{getConversationName()}</h3>
+            <h3 className="font-medium text-foreground" data-testid="chat-header-name">{conversationName}</h3>
             {conversation.type === 'group' && (
               <p className="text-sm text-muted-foreground">{conversation.participants.length} members</p>
             )}

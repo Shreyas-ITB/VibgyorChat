@@ -4,17 +4,41 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 export const ChatList = ({ conversations, selectedConversation, onSelectConversation, currentUser }) => {
   const getConversationName = (conversation) => {
-    if (conversation.name) return conversation.name;
-    if (conversation.participant_details && conversation.participant_details.length > 0) {
-      return conversation.participant_details[0].name;
+    if (conversation.type === 'group' && conversation.name) {
+      return conversation.name;
     }
+    
+    // For direct chats, show the OTHER person's name
+    if (conversation.participant_details && conversation.participant_details.length > 0) {
+      // Filter out the current user from participant details
+      const otherParticipants = conversation.participant_details.filter(
+        p => p.user_id !== currentUser.user_id
+      );
+      
+      if (otherParticipants.length > 0) {
+        return otherParticipants[0].name;
+      }
+    }
+    
     return 'Unknown';
   };
 
   const getConversationAvatar = (conversation) => {
-    if (conversation.participant_details && conversation.participant_details.length > 0) {
-      return conversation.participant_details[0].picture;
+    if (conversation.type === 'group') {
+      return null; // Could add group icon/image later
     }
+    
+    // For direct chats, show the OTHER person's avatar
+    if (conversation.participant_details && conversation.participant_details.length > 0) {
+      const otherParticipants = conversation.participant_details.filter(
+        p => p.user_id !== currentUser.user_id
+      );
+      
+      if (otherParticipants.length > 0) {
+        return otherParticipants[0].picture;
+      }
+    }
+    
     return null;
   };
 
@@ -34,37 +58,42 @@ export const ChatList = ({ conversations, selectedConversation, onSelectConversa
           No conversations yet. Start a new chat!
         </div>
       ) : (
-        conversations.map((conv) => (
-          <button
-            key={conv.conversation_id}
-            onClick={() => onSelectConversation(conv)}
-            className={`w-full p-4 flex items-start gap-3 hover:bg-accent/5 transition-colors border-b border-border text-left ${
-              selectedConversation?.conversation_id === conv.conversation_id ? 'bg-accent/10 border-l-4 border-l-vibgyor-orange' : ''
-            }`}
-            data-testid={`conversation-item-${conv.conversation_id}`}
-          >
-            <Avatar className="w-12 h-12 flex-shrink-0">
-              <AvatarImage src={getConversationAvatar(conv)} alt={getConversationName(conv)} />
-              <AvatarFallback className="bg-vibgyor-green text-white">
-                {getConversationName(conv).charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+        conversations.map((conv) => {
+          const convName = getConversationName(conv);
+          const convAvatar = getConversationAvatar(conv);
+          
+          return (
+            <button
+              key={conv.conversation_id}
+              onClick={() => onSelectConversation(conv)}
+              className={`w-full p-4 flex items-start gap-3 hover:bg-accent/5 transition-colors border-b border-border text-left ${
+                selectedConversation?.conversation_id === conv.conversation_id ? 'bg-accent/10 border-l-4 border-l-vibgyor-orange' : ''
+              }`}
+              data-testid={`conversation-item-${conv.conversation_id}`}
+            >
+              <Avatar className="w-12 h-12 flex-shrink-0">
+                <AvatarImage src={convAvatar} alt={convName} />
+                <AvatarFallback className="bg-vibgyor-green text-white">
+                  {convName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="font-medium text-foreground truncate">{getConversationName(conv)}</h3>
-                {conv.last_message_at && (
-                  <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                    {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
-                  </span>
-                )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-medium text-foreground truncate">{convName}</h3>
+                  {conv.last_message_at && (
+                    <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                      {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground truncate">
+                  {getLastMessagePreview(conv)}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground truncate">
-                {getLastMessagePreview(conv)}
-              </p>
-            </div>
-          </button>
-        ))
+            </button>
+          );
+        })
       )}
     </div>
   );
