@@ -93,6 +93,10 @@ export const DashboardPage = () => {
     }
   };
 
+  const handleProfileUpdate = (updatedUser) => {
+    setUser(updatedUser);
+  };
+
   if (isAuthenticated === null) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
