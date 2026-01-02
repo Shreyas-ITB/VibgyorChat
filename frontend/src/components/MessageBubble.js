@@ -80,30 +80,60 @@ export const MessageBubble = ({ message, currentUser, onEdit, onDelete, onReact,
       );
     }
 
-    // Parse @mentions
+    // Parse @mentions with role colors
     const content = message.content;
-    const mentionRegex = /@(\w+|everyone)/g;
+    const mentionRegex = /@(\w+)/g;
     const parts = [];
     let lastIndex = 0;
     let match;
 
     while ((match = mentionRegex.exec(content)) !== null) {
+      // Add text before mention
       if (match.index > lastIndex) {
         parts.push(content.substring(lastIndex, match.index));
       }
-      parts.push(
-        <span key={match.index} className="bg-vibgyor-orange/20 text-vibgyor-orange px-1 rounded">
-          @{match[1]}
-        </span>
-      );
+      
+      const mentionName = match[1].toLowerCase();
+      
+      // Check if it's a role mention
+      const role = roles.find(r => r.role_name.toLowerCase() === mentionName);
+      
+      if (role) {
+        // Highlight with role color
+        parts.push(
+          <span 
+            key={match.index} 
+            className="px-2 py-0.5 rounded font-medium"
+            style={{ 
+              backgroundColor: role.color + '30', // 30 is for transparency
+              color: role.color,
+              border: `1px solid ${role.color}`
+            }}
+          >
+            @{match[1]}
+          </span>
+        );
+      } else {
+        // Regular mention (user or @everyone)
+        parts.push(
+          <span 
+            key={match.index} 
+            className="bg-vibgyor-orange/20 text-vibgyor-orange px-2 py-0.5 rounded font-medium border border-vibgyor-orange/40"
+          >
+            @{match[1]}
+          </span>
+        );
+      }
+      
       lastIndex = match.index + match[0].length;
     }
 
+    // Add remaining text
     if (lastIndex < content.length) {
       parts.push(content.substring(lastIndex));
     }
 
-    return <div>{parts.length > 0 ? parts : content}</div>;
+    return <div className="whitespace-pre-wrap break-words">{parts.length > 0 ? parts : content}</div>;
   };
 
   return (
