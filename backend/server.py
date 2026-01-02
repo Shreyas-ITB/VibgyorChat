@@ -343,7 +343,10 @@ async def create_conversation(request: Request):
         'conversation_id': conversation_id,
         'type': conv_type,
         'name': name,
+        'picture': None,
         'participants': participant_ids,
+        'admins': [user.user_id] if conv_type == 'group' else [],
+        'owner': user.user_id if conv_type == 'group' else None,
         'created_at': datetime.now(timezone.utc),
         'last_message_at': None
     }
