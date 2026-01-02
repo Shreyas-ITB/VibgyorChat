@@ -342,7 +342,14 @@ export const ChatView = ({ conversation, currentUser }) => {
               {conversation.type === 'group' && <Info className="w-4 h-4 text-muted-foreground" />}
             </h3>
             {conversation.type === 'group' && (
-              <p className="text-sm text-muted-foreground">{conversation.participants.length} members • Click to view</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">{conversation.participants.length} members • Click to view</p>
+                {conversation.admins?.includes(currentUser.user_id) && (
+                  <span className="text-xs bg-vibgyor-orange/20 text-vibgyor-orange px-2 py-0.5 rounded-full font-medium">
+                    {conversation.owner === currentUser.user_id ? 'Owner' : 'Admin'}
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </button>
