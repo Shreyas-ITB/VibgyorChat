@@ -213,22 +213,28 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Chat list sidebar */}
-        <div className="bg-card border-r border-border flex flex-col">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-heading text-2xl text-foreground">
-                {viewMode === 'groups' ? 'Groups' : 'Chats'}
-              </h2>
-              <button
-                onClick={() => setShowNewChat(true)}
-                className="p-2 rounded-full bg-vibgyor-orange text-white hover:bg-vibgyor-orange-dark transition-colors shadow-lg hover:shadow-xl"
-                data-testid="new-chat-button"
-                title="New Chat"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
+        {/* Chat list sidebar - COLLAPSIBLE */}
+        <div className={`bg-card border-r border-border flex flex-col transition-all duration-300 ${
+          sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-full'
+        }`}>
+          {!sidebarCollapsed && (
+            <>
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-heading text-2xl text-foreground">
+                    {viewMode === 'groups' ? 'Groups' : 'Chats'}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowNewChat(true)}
+                      className="p-2 rounded-full bg-vibgyor-orange text-white hover:bg-vibgyor-orange-dark transition-colors shadow-lg hover:shadow-xl"
+                      data-testid="new-chat-button"
+                      title="New Chat"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
