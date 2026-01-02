@@ -16,24 +16,36 @@ export const SocketProvider = ({ children, user }) => {
   useEffect(() => {
     if (!user) return;
 
+    console.log('Initializing Socket.IO connection to:', BACKEND_URL);
+    
     const newSocket = io(BACKEND_URL, {
+      path: '/socket.io',
       transports: ['websocket', 'polling'],
       withCredentials: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
     });
 
     newSocket.on('connect', () => {
-      console.log('Socket connected');
+      console.log('✅ Socket connected successfully!', newSocket.id);
       setConnected(true);
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Socket disconnected');
+    newSocket.on('connect_error', (error) => {
+      console.error('❌ Socket connection error:', error);
+      setConnected(false);
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
       setConnected(false);
     });
 
     setSocket(newSocket);
 
     return () => {
+      console.log('Closing socket connection');
       newSocket.close();
     };
   }, [user]);
