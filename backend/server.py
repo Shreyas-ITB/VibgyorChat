@@ -716,6 +716,9 @@ async def typing(sid, data):
 # Include the router in the main app
 app.include_router(api_router)
 
+# Wrap the entire app with Socket.IO
+sio_app = socketio.ASGIApp(sio, other_asgi_app=app, socketio_path='/socket.io')
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -734,6 +737,3 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-
-# Mount Socket.IO app
-app.mount("/socket.io", socketio.ASGIApp(sio))
