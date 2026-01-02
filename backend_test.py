@@ -195,7 +195,7 @@ class VibgyorChatsAPITester:
         print("\n🔍 Testing WebSocket Endpoint...")
         try:
             # Just check if the socket.io endpoint is accessible
-            response = requests.get(f"{self.base_url}/socket.io/")
+            response = self.session.get(f"{self.base_url}/socket.io/")
             success = response.status_code in [200, 400]  # 400 is also acceptable for socket.io
             self.log_test("WebSocket Endpoint Available", success, f"Status: {response.status_code}")
             return success
