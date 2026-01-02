@@ -51,8 +51,19 @@ export const MessageBubble = ({ message, currentUser, onEdit, onDelete, onReact,
     if (message.type === 'image') {
       return (
         <div className="max-w-sm">
-          <img src={BACKEND_URL + message.file_url} alt={message.content} className="rounded-lg" />
-          {message.content && <p className="mt-2">{message.content}</p>}
+          <img 
+            src={`${BACKEND_URL}${message.file_url}`} 
+            alt={message.content} 
+            className="rounded-lg w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => window.open(`${BACKEND_URL}${message.file_url}`, '_blank')}
+            onError={(e) => {
+              console.error('Image load error:', e);
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'block';
+            }}
+          />
+          <div style={{ display: 'none' }} className="text-red-500 text-sm">Failed to load image</div>
+          {message.content && <p className="mt-2 text-sm">{message.content}</p>}
         </div>
       );
     }
@@ -60,8 +71,8 @@ export const MessageBubble = ({ message, currentUser, onEdit, onDelete, onReact,
     if (message.type === 'video') {
       return (
         <div className="max-w-sm">
-          <video src={BACKEND_URL + message.file_url} controls className="rounded-lg w-full" />
-          {message.content && <p className="mt-2">{message.content}</p>}
+          <video src={`${BACKEND_URL}${message.file_url}`} controls className="rounded-lg w-full" />
+          {message.content && <p className="mt-2 text-sm">{message.content}</p>}
         </div>
       );
     }
@@ -69,7 +80,7 @@ export const MessageBubble = ({ message, currentUser, onEdit, onDelete, onReact,
     if (message.type === 'file') {
       return (
         <a
-          href={BACKEND_URL + message.file_url}
+          href={`${BACKEND_URL}${message.file_url}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 hover:underline"
