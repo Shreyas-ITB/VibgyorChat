@@ -64,7 +64,10 @@ class Conversation(BaseModel):
     conversation_id: str
     type: str  # 'direct' or 'group'
     name: Optional[str] = None
+    picture: Optional[str] = None  # Group picture
     participants: List[str]
+    admins: Optional[List[str]] = []  # List of admin user_ids
+    owner: Optional[str] = None  # Group owner user_id
     created_at: datetime
     last_message_at: Optional[datetime] = None
 
