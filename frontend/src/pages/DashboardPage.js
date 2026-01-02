@@ -142,12 +142,14 @@ export const DashboardPage = () => {
 
   return (
     <SocketProvider user={user}>
-      <div className="grid grid-cols-[80px_350px_1fr] h-screen overflow-hidden bg-background" data-testid="dashboard">
+      <div className={`grid h-screen overflow-hidden bg-background transition-all duration-300 ${
+        sidebarCollapsed ? 'grid-cols-[80px_0px_1fr]' : 'grid-cols-[80px_350px_1fr]'
+      }`} data-testid="dashboard">
         {/* Navigation sidebar */}
         <div className="bg-vibgyor-green dark:bg-vibgyor-green/90 text-white flex flex-col items-center py-6 gap-6">
           <button
             onClick={() => setShowProfile(true)}
-            className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity group relative"
             data-testid="profile-button"
           >
             <Avatar className="w-12 h-12 shadow-lg ring-2 ring-white/20">
@@ -156,6 +158,16 @@ export const DashboardPage = () => {
                 {user.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEditProfile(true);
+              }}
+              className="absolute -bottom-1 -right-1 p-1 bg-vibgyor-orange rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Edit profile"
+            >
+              <Edit className="w-3 h-3" />
+            </button>
           </button>
 
           <div className="flex-1 flex flex-col gap-4">
