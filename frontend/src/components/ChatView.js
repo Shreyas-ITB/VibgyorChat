@@ -20,8 +20,11 @@ export const ChatView = ({ conversation, currentUser }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const menuRef = useRef(null);
   const { socket, joinConversation, leaveConversation, sendTyping } = useSocket();
 
   // Fetch messages
