@@ -326,6 +326,13 @@ async def create_conversation(request: Request):
             'participants': {'$all': participant_ids, '$size': 2}
         }, {'_id': 0})
         if existing:
+            # Add participant details to existing conversation
+            participant_ids_to_fetch = [p for p in existing['participants'] if p != user.user_id]
+            participants = await db.users.find(
+                {'user_id': {'$in': participant_ids_to_fetch}},
+                {'_id': 0, 'user_id': 1, 'name': 1, 'picture': 1}
+            ).to_list(100)
+            existing['participant_details'] = participants
             return existing
     
     conversation_id = f"conv_{uuid.uuid4().hex[:12]}"
@@ -339,7 +346,17 @@ async def create_conversation(request: Request):
     }
     
     await db.conversations.insert_one(conversation)
-    return await db.conversations.find_one({'conversation_id': conversation_id}, {'_id': 0})
+    conv = await db.conversations.find_one({'conversation_id': conversation_id}, {'_id': 0})
+    
+    # Add participant details
+    participant_ids_to_fetch = [p for p in conv['participants'] if p != user.user_id]
+    participants = await db.users.find(
+        {'user_id': {'$in': participant_ids_to_fetch}},
+        {'_id': 0, 'user_id': 1, 'name': 1, 'picture': 1}
+    ).to_list(100)
+    conv['participant_details'] = participants
+    
+    return conv
 
 @api_router.get("/conversations/{conversation_id}")
 async def get_conversation(request: Request, conversation_id: str):
