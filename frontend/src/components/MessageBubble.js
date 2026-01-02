@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Edit2, Trash2, MoreVertical } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import axios from 'axios';
 
-export const MessageBubble = ({ message, currentUser, onEdit, onDelete, onReact }) => {
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+export const MessageBubble = ({ message, currentUser, onEdit, onDelete, onReact, conversationId }) => {
   const [showActions, setShowActions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showReactions, setShowReactions] = useState(false);
+  const [roles, setRoles] = useState([]);
 
   const isSent = message.sender_id === currentUser.user_id;
+
+  // Fetch roles for mention highlighting
+  useEffect(() => {
+    if (conversationId && message.content.includes('@')) {
+      fetchRoles();
+    }
+  }, [conversationId, message.content]);
+
+  const fetchRoles = async () => {
+    try {
+      const response = await axios.get(`${API}/groups/${conversationId}/roles`, {
+        withCredentials: true
+      });
+      setRoles(response.data);
+    } catch (error) {
+      // Not a group or no roles
+      setRoles([]);
+    }
+  };
 
   const handleEdit = async () => {
     if (editContent.trim() && editContent !== message.content) {
