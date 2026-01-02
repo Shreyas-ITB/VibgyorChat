@@ -661,6 +661,180 @@ async def remove_role_from_member(request: Request, conversation_id: str, role_i
     
     return {"message": "Role removed"}
 
+# Group management endpoints
+@api_router.post("/groups/{conversation_id}/members/remove")
+async def remove_member_from_group(request: Request, conversation_id: str):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    body = await request.json()
+    member_id = body.get('user_id')
+    
+    # Verify group exists and user is admin or owner
+    conv = await db.conversations.find_one(
+        {'conversation_id': conversation_id, 'type': 'group'},
+        {'_id': 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Check if user is admin or owner
+    if user.user_id not in conv.get('admins', []) and user.user_id != conv.get('owner'):
+        raise HTTPException(status_code=403, detail="Only admins can remove members")
+    
+    # Can't remove owner
+    if member_id == conv.get('owner'):
+        raise HTTPException(status_code=400, detail="Cannot remove group owner")
+    
+    # Remove member from group
+    await db.conversations.update_one(
+        {'conversation_id': conversation_id},
+        {'$pull': {'participants': member_id, 'admins': member_id}}
+    )
+    
+    return {"message": "Member removed"}
+
+@api_router.post("/groups/{conversation_id}/admins/promote")
+async def promote_to_admin(request: Request, conversation_id: str):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    body = await request.json()
+    member_id = body.get('user_id')
+    
+    # Verify group exists
+    conv = await db.conversations.find_one(
+        {'conversation_id': conversation_id, 'type': 'group'},
+        {'_id': 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Check if user is owner
+    if user.user_id != conv.get('owner'):
+        raise HTTPException(status_code=403, detail="Only owner can promote admins")
+    
+    # Add to admins list
+    await db.conversations.update_one(
+        {'conversation_id': conversation_id},
+        {'$addToSet': {'admins': member_id}}
+    )
+    
+    return {"message": "Member promoted to admin"}
+
+@api_router.post("/groups/{conversation_id}/admins/demote")
+async def demote_from_admin(request: Request, conversation_id: str):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    body = await request.json()
+    member_id = body.get('user_id')
+    
+    # Verify group exists
+    conv = await db.conversations.find_one(
+        {'conversation_id': conversation_id, 'type': 'group'},
+        {'_id': 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Check if user is owner
+    if user.user_id != conv.get('owner'):
+        raise HTTPException(status_code=403, detail="Only owner can demote admins")
+    
+    # Remove from admins list
+    await db.conversations.update_one(
+        {'conversation_id': conversation_id},
+        {'$pull': {'admins': member_id}}
+    )
+    
+    return {"message": "Admin demoted"}
+
+@api_router.put("/groups/{conversation_id}")
+async def update_group(request: Request, conversation_id: str):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    body = await request.json()
+    
+    # Verify group exists and user is admin
+    conv = await db.conversations.find_one(
+        {'conversation_id': conversation_id, 'type': 'group'},
+        {'_id': 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    if user.user_id not in conv.get('admins', []) and user.user_id != conv.get('owner'):
+        raise HTTPException(status_code=403, detail="Only admins can edit group")
+    
+    # Update fields
+    update_data = {}
+    if 'name' in body:
+        update_data['name'] = body['name']
+    if 'picture' in body:
+        update_data['picture'] = body['picture']
+    
+    if update_data:
+        await db.conversations.update_one(
+            {'conversation_id': conversation_id},
+            {'$set': update_data}
+        )
+    
+    return {"message": "Group updated"}
+
+@api_router.delete("/groups/{conversation_id}")
+async def delete_group(request: Request, conversation_id: str):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Verify group exists and user is owner
+    conv = await db.conversations.find_one(
+        {'conversation_id': conversation_id, 'type': 'group'},
+        {'_id': 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    if user.user_id != conv.get('owner'):
+        raise HTTPException(status_code=403, detail="Only owner can delete group")
+    
+    # Delete group, messages, and roles
+    await db.conversations.delete_one({'conversation_id': conversation_id})
+    await db.messages.delete_many({'conversation_id': conversation_id})
+    await db.group_roles.delete_many({'conversation_id': conversation_id})
+    
+    return {"message": "Group deleted"}
+
+# User profile update
+@api_router.put("/users/profile")
+async def update_profile(request: Request):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    body = await request.json()
+    
+    update_data = {}
+    if 'name' in body:
+        update_data['name'] = body['name']
+    if 'picture' in body:
+        update_data['picture'] = body['picture']
+    
+    if update_data:
+        await db.users.update_one(
+            {'user_id': user.user_id},
+            {'$set': update_data}
+        )
+    
+    updated_user = await db.users.find_one({'user_id': user.user_id}, {'_id': 0})
+    return updated_user
+
 # File upload endpoint
 @api_router.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
