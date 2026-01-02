@@ -22,6 +22,9 @@ export const ChatView = ({ conversation, currentUser }) => {
   const [uploading, setUploading] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [imageCaption, setImageCaption] = useState('');
+  const [showCaptionDialog, setShowCaptionDialog] = useState(false);
+  const [pendingFile, setPendingFile] = useState(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const menuRef = useRef(null);
