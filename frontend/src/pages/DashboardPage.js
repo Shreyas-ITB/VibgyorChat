@@ -301,6 +301,14 @@ export const DashboardPage = () => {
           onClose={() => setShowProfile(false)}
         />
       )}
+
+      {showEditProfile && (
+        <EditProfileDialog
+          user={user}
+          onClose={() => setShowEditProfile(false)}
+          onUpdate={handleProfileUpdate}
+        />
+      )}
     </SocketProvider>
   );
 };
