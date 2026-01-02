@@ -304,21 +304,30 @@ export const ChatView = ({ conversation, currentUser }) => {
       
       {/* Header */}
       <div className="bg-card border-b border-border p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-vibgyor-green text-white flex items-center justify-center font-medium overflow-hidden">
+        <button
+          onClick={() => conversation.type === 'group' && setShowGroupInfo(true)}
+          className={`flex items-center gap-3 ${
+            conversation.type === 'group' ? 'cursor-pointer hover:bg-accent/5 rounded-lg p-2 -ml-2 transition-colors' : ''
+          }`}
+          data-testid="chat-header-button"
+        >
+          <div className="w-10 h-10 rounded-full bg-vibgyor-green text-white flex items-center justify-center font-medium overflow-hidden flex-shrink-0">
             {conversationAvatar ? (
               <img src={conversationAvatar} alt={conversationName} className="w-full h-full object-cover" />
             ) : (
               conversationName.charAt(0).toUpperCase()
             )}
           </div>
-          <div>
-            <h3 className="font-medium text-foreground" data-testid="chat-header-name">{conversationName}</h3>
+          <div className="text-left">
+            <h3 className="font-medium text-foreground flex items-center gap-2" data-testid="chat-header-name">
+              {conversationName}
+              {conversation.type === 'group' && <Info className="w-4 h-4 text-muted-foreground" />}
+            </h3>
             {conversation.type === 'group' && (
-              <p className="text-sm text-muted-foreground">{conversation.participants.length} members</p>
+              <p className="text-sm text-muted-foreground">{conversation.participants.length} members • Click to view</p>
             )}
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-2">
           <button
@@ -328,9 +337,47 @@ export const ChatView = ({ conversation, currentUser }) => {
           >
             <Search className="w-5 h-5 text-muted-foreground" />
           </button>
-          <button className="p-2 rounded-lg hover:bg-accent/10 transition-colors">
-            <MoreVertical className="w-5 h-5 text-muted-foreground" />
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-2 rounded-lg hover:bg-accent/10 transition-colors"
+              data-testid="chat-menu-button"
+            >
+              <MoreVertical className="w-5 h-5 text-muted-foreground" />
+            </button>
+            
+            {showMenu && (
+              <div 
+                className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-50"
+                data-testid="chat-menu"
+              >
+                {conversation.type === 'group' && (
+                  <button
+                    onClick={() => {
+                      setShowGroupInfo(true);
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-foreground hover:bg-accent/10 transition-colors flex items-center gap-2"
+                    data-testid="menu-group-info"
+                  >
+                    <Info className="w-4 h-4" />
+                    Group Info
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowSearch(true);
+                    setShowMenu(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-foreground hover:bg-accent/10 transition-colors flex items-center gap-2"
+                  data-testid="menu-search"
+                >
+                  <Search className="w-4 h-4" />
+                  Search Messages
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
