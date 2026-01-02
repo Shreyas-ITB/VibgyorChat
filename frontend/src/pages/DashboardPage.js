@@ -7,6 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ChatList } from '../components/ChatList';
 import { ChatView } from '../components/ChatView';
 import { NewChatDialog } from '../components/NewChatDialog';
+import { ProfileDialog } from '../components/ProfileDialog';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -21,7 +22,9 @@ export const DashboardPage = () => {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [showNewChat, setShowNewChat] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('all'); // 'all', 'direct', 'groups'
 
   useEffect(() => {
     if (location.state?.user) return;
@@ -101,37 +104,67 @@ export const DashboardPage = () => {
     return null;
   }
 
-  const filteredConversations = conversations.filter(conv => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    if (conv.name) return conv.name.toLowerCase().includes(query);
-    if (conv.participant_details) {
-      return conv.participant_details.some(p => p.name.toLowerCase().includes(query));
+  // Filter conversations based on view mode
+  const getFilteredConversations = () => {
+    let filtered = conversations;
+
+    // Apply view mode filter
+    if (viewMode === 'direct') {
+      filtered = filtered.filter(conv => conv.type === 'direct');
+    } else if (viewMode === 'groups') {
+      filtered = filtered.filter(conv => conv.type === 'group');
     }
-    return false;
-  });
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(conv => {
+        if (conv.name) return conv.name.toLowerCase().includes(query);
+        if (conv.participant_details) {
+          return conv.participant_details.some(p => p.name.toLowerCase().includes(query));
+        }
+        return false;
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredConversations = getFilteredConversations();
 
   return (
     <SocketProvider user={user}>
       <div className="grid grid-cols-[80px_350px_1fr] h-screen overflow-hidden bg-background" data-testid="dashboard">
         {/* Navigation sidebar */}
         <div className="bg-vibgyor-green dark:bg-vibgyor-green/90 text-white flex flex-col items-center py-6 gap-6">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-full bg-vibgyor-orange flex items-center justify-center font-heading text-xl font-bold">
-              V
+          <button
+            onClick={() => setShowProfile(true)}
+            className="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity"
+            data-testid="profile-button"
+          >
+            <div className="w-12 h-12 rounded-full bg-vibgyor-orange flex items-center justify-center font-heading text-xl font-bold shadow-lg">
+              {user.name?.charAt(0).toUpperCase()}
             </div>
-          </div>
+          </button>
 
           <div className="flex-1 flex flex-col gap-4">
             <button 
-              className="p-3 rounded-lg hover:bg-white/10 transition-colors"
-              data-testid="chats-nav-button"
+              onClick={() => setViewMode('all')}
+              className={`p-3 rounded-lg transition-colors ${
+                viewMode === 'all' ? 'bg-white/20' : 'hover:bg-white/10'
+              }`}
+              data-testid="all-chats-button"
+              title="All Chats"
             >
               <MessageSquare className="w-6 h-6" />
             </button>
             <button 
-              className="p-3 rounded-lg hover:bg-white/10 transition-colors"
-              data-testid="groups-nav-button"
+              onClick={() => setViewMode('groups')}
+              className={`p-3 rounded-lg transition-colors ${
+                viewMode === 'groups' ? 'bg-white/20' : 'hover:bg-white/10'
+              }`}
+              data-testid="groups-only-button"
+              title="Groups Only"
             >
               <Users className="w-6 h-6" />
             </button>
@@ -142,6 +175,7 @@ export const DashboardPage = () => {
               onClick={toggleTheme}
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
               data-testid="theme-toggle-button"
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
             >
               {theme === 'light' ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
             </button>
@@ -149,6 +183,7 @@ export const DashboardPage = () => {
               onClick={handleLogout}
               className="p-3 rounded-lg hover:bg-white/10 transition-colors"
               data-testid="logout-button"
+              title="Logout"
             >
               <LogOut className="w-6 h-6" />
             </button>
@@ -159,11 +194,14 @@ export const DashboardPage = () => {
         <div className="bg-card border-r border-border flex flex-col">
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-heading text-2xl text-foreground">Chats</h2>
+              <h2 className="font-heading text-2xl text-foreground">
+                {viewMode === 'groups' ? 'Groups' : 'Chats'}
+              </h2>
               <button
                 onClick={() => setShowNewChat(true)}
-                className="p-2 rounded-full bg-vibgyor-orange text-white hover:bg-vibgyor-orange-dark transition-colors"
+                className="p-2 rounded-full bg-vibgyor-orange text-white hover:bg-vibgyor-orange-dark transition-colors shadow-lg hover:shadow-xl"
                 data-testid="new-chat-button"
+                title="New Chat"
               >
                 <Plus className="w-5 h-5" />
               </button>
@@ -179,6 +217,19 @@ export const DashboardPage = () => {
                 data-testid="search-conversations-input"
               />
             </div>
+            {viewMode !== 'all' && (
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">
+                  {viewMode === 'groups' ? 'Showing groups only' : 'Showing direct chats only'}
+                </span>
+                <button
+                  onClick={() => setViewMode('all')}
+                  className="text-vibgyor-orange hover:underline"
+                >
+                  Show all
+                </button>
+              </div>
+            )}
           </div>
 
           <ChatList
@@ -202,7 +253,11 @@ export const DashboardPage = () => {
                 <MessageSquare className="w-16 h-16 mx-auto text-muted-foreground" />
                 <div>
                   <h3 className="font-heading text-2xl text-foreground mb-2">Welcome to Vibgyor Chats</h3>
-                  <p className="text-muted-foreground">Select a conversation to start messaging</p>
+                  <p className="text-muted-foreground">
+                    {viewMode === 'groups' 
+                      ? 'Select a group to start messaging'
+                      : 'Select a conversation to start messaging'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -214,6 +269,13 @@ export const DashboardPage = () => {
         <NewChatDialog
           onClose={() => setShowNewChat(false)}
           onCreateConversation={handleNewConversation}
+        />
+      )}
+
+      {showProfile && (
+        <ProfileDialog
+          user={user}
+          onClose={() => setShowProfile(false)}
         />
       )}
     </SocketProvider>
