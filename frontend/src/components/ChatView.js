@@ -512,6 +512,69 @@ export const ChatView = ({ conversation, currentUser }) => {
           }}
         />
       )}
+
+      {/* Image Caption Dialog */}
+      {showCaptionDialog && pendingFile && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="p-6">
+              <h3 className="font-heading text-xl text-foreground mb-4">Add Caption</h3>
+              {pendingFile.type.startsWith('image/') && (
+                <img 
+                  src={URL.createObjectURL(pendingFile)} 
+                  alt="Preview" 
+                  className="w-full rounded-lg mb-4 max-h-64 object-contain bg-black/5"
+                />
+              )}
+              {pendingFile.type.startsWith('video/') && (
+                <video 
+                  src={URL.createObjectURL(pendingFile)} 
+                  className="w-full rounded-lg mb-4 max-h-64"
+                  controls
+                />
+              )}
+              <textarea
+                value={imageCaption}
+                onChange={(e) => setImageCaption(e.target.value)}
+                placeholder="Add a caption (optional)..."
+                className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-vibgyor-orange resize-none text-foreground placeholder:text-muted-foreground"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => uploadFile(pendingFile, imageCaption)}
+                  disabled={uploading}
+                  className="flex-1 bg-vibgyor-orange hover:bg-vibgyor-orange-dark text-white rounded-lg px-4 py-3 font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {uploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" />
+                      Send
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCaptionDialog(false);
+                    setImageCaption('');
+                    setPendingFile(null);
+                  }}
+                  className="px-4 py-3 bg-accent/10 hover:bg-accent/20 text-foreground rounded-lg transition-colors"
+                  disabled={uploading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
