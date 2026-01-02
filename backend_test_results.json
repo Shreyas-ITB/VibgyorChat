@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-01-02T14:55:20.585860",
+  "summary": {
+    "total_tests": 8,
+    "passed": 4,
+    "failed": 4,
+    "success_rate": 50.0
+  },
+  "test_results": [
+    {
+      "test": "Demo Login",
+      "success": true,
+      "details": "Status: 200"
+    },
+    {
+      "test": "Get Current User",
+      "success": false,
+      "details": "Status: 401, Expected: 200, Response: {'detail': 'Not authenticated'}"
+    },
+    {
+      "test": "Search Users (empty query)",
+      "success": false,
+      "details": "Status: 401, Expected: 200, Response: {'detail': 'Not authenticated'}"
+    },
+    {
+      "test": "Get Conversations",
+      "success": false,
+      "details": "Status: 401, Expected: 200, Response: {'detail': 'Not authenticated'}"
+    },
+    {
+      "test": "Get Messages (non-existent conversation)",
+      "success": false,
+      "details": "Status: 401, Expected: 404, Response: {'detail': 'Not authenticated'}"
+    },
+    {
+      "test": "File Upload (no file)",
+      "success": true,
+      "details": "Status: 422"
+    },
+    {
+      "test": "WebSocket Endpoint Available",
+      "success": true,
+      "details": "Status: 200"
+    },
+    {
+      "test": "Logout",
+      "success": true,
+      "details": "Status: 200"
+    }
+  ]
+}
