@@ -551,6 +551,7 @@ async def create_group_role(request: Request, conversation_id: str):
     
     body = await request.json()
     role_name = body.get('role_name')
+    color = body.get('color', '#5865F2')
     member_ids = body.get('member_ids', [])
     
     # Verify group exists and user is participant
@@ -566,6 +567,7 @@ async def create_group_role(request: Request, conversation_id: str):
         'role_id': role_id,
         'conversation_id': conversation_id,
         'role_name': role_name.lower(),
+        'color': color,
         'member_ids': member_ids,
         'created_at': datetime.now(timezone.utc)
     }
@@ -585,6 +587,73 @@ async def get_group_roles(request: Request, conversation_id: str):
     ).to_list(100)
     
     return roles
+
+@api_router.delete("/groups/{conversation_id}/roles/{role_id}")
+async def delete_group_role(request: Request, conversation_id: str, role_id: str):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Verify group exists and user is participant
+    conv = await db.conversations.find_one(
+        {'conversation_id': conversation_id, 'type': 'group', 'participants': user.user_id},
+        {'_id': 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    await db.group_roles.delete_one({'role_id': role_id, 'conversation_id': conversation_id})
+    return {"message": "Role deleted"}
+
+@api_router.post("/groups/{conversation_id}/roles/{role_id}/assign")
+async def assign_role_to_member(request: Request, conversation_id: str, role_id: str):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    body = await request.json()
+    user_id = body.get('user_id')
+    
+    # Verify group exists and user is participant
+    conv = await db.conversations.find_one(
+        {'conversation_id': conversation_id, 'type': 'group', 'participants': user.user_id},
+        {'_id': 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Add user to role's member list
+    await db.group_roles.update_one(
+        {'role_id': role_id, 'conversation_id': conversation_id},
+        {'$addToSet': {'member_ids': user_id}}
+    )
+    
+    return {"message": "Role assigned"}
+
+@api_router.post("/groups/{conversation_id}/roles/{role_id}/remove")
+async def remove_role_from_member(request: Request, conversation_id: str, role_id: str):
+    user = await get_user_from_request(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    body = await request.json()
+    user_id = body.get('user_id')
+    
+    # Verify group exists and user is participant
+    conv = await db.conversations.find_one(
+        {'conversation_id': conversation_id, 'type': 'group', 'participants': user.user_id},
+        {'_id': 0}
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Remove user from role's member list
+    await db.group_roles.update_one(
+        {'role_id': role_id, 'conversation_id': conversation_id},
+        {'$pull': {'member_ids': user_id}}
+    )
+    
+    return {"message": "Role removed"}
 
 # File upload endpoint
 @api_router.post("/upload")
