@@ -488,6 +488,9 @@ export const ChatView = ({ conversation, currentUser }) => {
           conversation={conversation}
           currentUser={currentUser}
           onClose={() => setShowGroupInfo(false)}
+          onUpdate={() => {
+            // Refresh conversation data if needed
+          }}
         />
       )}
     </div>
