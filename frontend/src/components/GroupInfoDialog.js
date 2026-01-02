@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, UserPlus, Settings, Users as UsersIcon, Plus, Trash2, Search, Shield, ShieldOff, Crown, Camera, Edit2, Trash } from 'lucide-react';
+import { X, Plus, Trash2, Search, Shield, ShieldOff, Crown, Camera, Edit2, Trash, Check } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { toast } from 'sonner';
 
@@ -37,18 +37,15 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
     try {
       setLoading(true);
       
-      // Fetch roles
       const rolesResponse = await axios.get(`${API}/groups/${conversation.conversation_id}/roles`, {
         withCredentials: true
       });
       setRoles(rolesResponse.data);
 
-      // Fetch member details
       const membersResponse = await axios.get(`${API}/users/search?q=`, {
         withCredentials: true
       });
       
-      // Filter to only show members in this conversation
       const conversationMembers = membersResponse.data.filter(user => 
         conversation.participants.includes(user.user_id)
       );
@@ -129,6 +126,10 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
   const handleRemoveMember = async (memberId) => {
     if (memberId === conversation.owner) {
       toast.error('Cannot remove group owner');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to remove this member?')) {
       return;
     }
 
@@ -236,7 +237,7 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
       
       toast.success('Group deleted');
       onClose();
-      window.location.href = '/dashboard'; // Redirect to dashboard
+      window.location.href = '/dashboard';
     } catch (error) {
       console.error('Error deleting group:', error);
       toast.error(error.response?.data?.detail || 'Failed to delete group');
@@ -293,14 +294,25 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                     type="text"
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
-                    className="px-3 py-1 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-vibgyor-orange text-foreground"
+                    className="px-3 py-1 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-vibgyor-orange text-foreground font-heading text-xl"
                     autoFocus
+                    data-testid="edit-group-name-input"
                   />
                   <button
                     onClick={handleUpdateGroupName}
                     className="p-1 hover:bg-accent/10 rounded"
+                    data-testid="save-group-name-button"
                   >
-                    <Check className="w-4 h-4 text-vibgyor-orange" />
+                    <Check className="w-5 h-5 text-vibgyor-orange" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingGroupName(false);
+                      setGroupName(conversation.name || '');
+                    }}
+                    className="p-1 hover:bg-accent/10 rounded"
+                  >
+                    <X className="w-5 h-5 text-muted-foreground" />
                   </button>
                 </div>
               ) : (
@@ -310,6 +322,7 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                     <button
                       onClick={() => setEditingGroupName(true)}
                       className="p-1 hover:bg-accent/10 rounded"
+                      data-testid="edit-group-name-button"
                     >
                       <Edit2 className="w-4 h-4 text-muted-foreground" />
                     </button>
@@ -336,11 +349,11 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
             </div>
           ) : (
             <>
-              {/* Roles Section */}
-              {isAdmin && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium text-foreground text-lg">Roles</h3>
+              {/* Roles Section - ALWAYS VISIBLE */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-foreground text-lg">Roles</h3>
+                  {isAdmin && (
                     <button
                       onClick={() => setShowAddRole(!showAddRole)}
                       className="flex items-center gap-2 px-3 py-2 bg-vibgyor-orange hover:bg-vibgyor-orange-dark text-white rounded-lg transition-colors text-sm"
@@ -349,74 +362,78 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                       <Plus className="w-4 h-4" />
                       Add Role
                     </button>
-                  </div>
+                  )}
+                </div>
 
-                  {showAddRole && (
-                    <div className="mb-4 p-4 bg-accent/5 rounded-lg space-y-3">
-                      <input
-                        type="text"
-                        placeholder="Role name (e.g., Designer, Manager)"
-                        value={newRoleName}
-                        onChange={(e) => setNewRoleName(e.target.value)}
-                        className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-vibgyor-orange text-foreground placeholder:text-muted-foreground"
-                        data-testid="role-name-input"
-                      />
-                      
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-2 block">Role Color</label>
-                        <div className="flex flex-wrap gap-2">
-                          {PRESET_COLORS.map(color => (
-                            <button
-                              key={color}
-                              onClick={() => setNewRoleColor(color)}
-                              className={`w-10 h-10 rounded-lg transition-all ${
-                                newRoleColor === color ? 'ring-2 ring-vibgyor-orange ring-offset-2 ring-offset-background scale-110' : 'hover:scale-105'
-                              }`}
-                              style={{ backgroundColor: color }}
-                              data-testid={`color-${color}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleCreateRole}
-                          className="px-4 py-2 bg-vibgyor-orange hover:bg-vibgyor-orange-dark text-white rounded-lg transition-colors"
-                          data-testid="create-role-button"
-                        >
-                          Create
-                        </button>
-                        <button
-                          onClick={() => setShowAddRole(false)}
-                          className="px-4 py-2 bg-accent/10 hover:bg-accent/20 text-foreground rounded-lg transition-colors"
-                        >
-                          Cancel
-                        </button>
+                {showAddRole && isAdmin && (
+                  <div className="mb-4 p-4 bg-accent/5 rounded-lg space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Role name (e.g., Designer, Manager)"
+                      value={newRoleName}
+                      onChange={(e) => setNewRoleName(e.target.value)}
+                      className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-vibgyor-orange text-foreground placeholder:text-muted-foreground"
+                      data-testid="role-name-input"
+                    />
+                    
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-2 block">Role Color</label>
+                      <div className="flex flex-wrap gap-2">
+                        {PRESET_COLORS.map(color => (
+                          <button
+                            key={color}
+                            onClick={() => setNewRoleColor(color)}
+                            className={`w-10 h-10 rounded-lg transition-all ${
+                              newRoleColor === color ? 'ring-2 ring-vibgyor-orange ring-offset-2 ring-offset-background scale-110' : 'hover:scale-105'
+                            }`}
+                            style={{ backgroundColor: color }}
+                            data-testid={`color-${color}`}
+                          />
+                        ))}
                       </div>
                     </div>
-                  )}
 
-                  <div className="space-y-2">
-                    {roles.length === 0 ? (
-                      <p className="text-muted-foreground text-sm py-4 text-center">No roles yet. Create one to organize your team!</p>
-                    ) : (
-                      roles.map(role => (
-                        <div
-                          key={role.role_id}
-                          className="flex items-center justify-between p-3 bg-accent/5 rounded-lg group"
-                          data-testid={`role-${role.role_id}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-4 h-4 rounded-full"
-                              style={{ backgroundColor: role.color || '#5865F2' }}
-                            />
-                            <span className="font-medium text-foreground capitalize">{role.role_name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {role.member_ids?.length || 0} members
-                            </span>
-                          </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCreateRole}
+                        className="px-4 py-2 bg-vibgyor-orange hover:bg-vibgyor-orange-dark text-white rounded-lg transition-colors"
+                        data-testid="create-role-button"
+                      >
+                        Create
+                      </button>
+                      <button
+                        onClick={() => setShowAddRole(false)}
+                        className="px-4 py-2 bg-accent/10 hover:bg-accent/20 text-foreground rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {roles.length === 0 ? (
+                    <p className="text-muted-foreground text-sm py-4 text-center">
+                      {isAdmin ? 'No roles yet. Create one to organize your team!' : 'No roles created yet'}
+                    </p>
+                  ) : (
+                    roles.map(role => (
+                      <div
+                        key={role.role_id}
+                        className="flex items-center justify-between p-3 bg-accent/5 rounded-lg group"
+                        data-testid={`role-${role.role_id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: role.color || '#5865F2' }}
+                          />
+                          <span className="font-medium text-foreground capitalize">{role.role_name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {role.member_ids?.length || 0} members
+                          </span>
+                        </div>
+                        {isAdmin && (
                           <button
                             onClick={() => handleDeleteRole(role.role_id)}
                             className="opacity-0 group-hover:opacity-100 p-2 hover:bg-destructive/10 rounded-lg transition-all"
@@ -424,18 +441,16 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Members Section */}
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-foreground text-lg">Members</h3>
-                </div>
+                <h3 className="font-medium text-foreground text-lg mb-4">Members</h3>
 
                 {/* Member Search */}
                 <div className="relative mb-4">
@@ -492,6 +507,7 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                                     onClick={() => memberIsAdmin ? handleDemoteAdmin(member.user_id) : handlePromoteToAdmin(member.user_id)}
                                     className="px-3 py-1 text-sm bg-vibgyor-orange/10 hover:bg-vibgyor-orange/20 text-vibgyor-orange rounded-lg transition-colors flex items-center gap-1"
                                     title={memberIsAdmin ? "Demote from admin" : "Promote to admin"}
+                                    data-testid={`promote-demote-${member.user_id}`}
                                   >
                                     {memberIsAdmin ? <ShieldOff className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
                                     {memberIsAdmin ? 'Demote' : 'Promote'}
@@ -500,6 +516,7 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                                 <button
                                   onClick={() => setEditingMember(isEditing ? null : member.user_id)}
                                   className="px-3 py-1 text-sm bg-accent/10 hover:bg-accent/20 text-foreground rounded-lg transition-colors"
+                                  data-testid={`edit-roles-${member.user_id}`}
                                 >
                                   {isEditing ? 'Done' : 'Edit Roles'}
                                 </button>
@@ -508,6 +525,7 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                                     onClick={() => handleRemoveMember(member.user_id)}
                                     className="p-1 hover:bg-destructive/10 rounded-lg transition-colors"
                                     title="Remove from group"
+                                    data-testid={`remove-member-${member.user_id}`}
                                   >
                                     <Trash2 className="w-4 h-4 text-destructive" />
                                   </button>
@@ -548,6 +566,7 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                                 key={role.role_id}
                                 onClick={() => handleAssignRole(member.user_id, role.role_id)}
                                 className="flex items-center gap-2 px-3 py-1 border border-border rounded-full text-sm hover:bg-accent/10 transition-colors"
+                                data-testid={`assign-${role.role_id}-to-${member.user_id}`}
                               >
                                 <div
                                   className="w-3 h-3 rounded-full"
@@ -567,7 +586,7 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
 
               {/* Danger Zone */}
               {isOwner && (
-                <div className="border-t border-border pt-6">
+                <div className="border-t border-destructive/20 pt-6">
                   <h3 className="font-medium text-destructive text-lg mb-4">Danger Zone</h3>
                   <button
                     onClick={handleDeleteGroup}
@@ -575,8 +594,11 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
                     data-testid="delete-group-button"
                   >
                     <Trash className="w-5 h-5" />
-                    Delete Group
+                    Delete Group Permanently
                   </button>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    This action cannot be undone. All messages will be deleted.
+                  </p>
                 </div>
               )}
             </>
