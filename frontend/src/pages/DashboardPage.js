@@ -270,11 +270,14 @@ export const DashboardPage = () => {
             </>
           )}
           
-          {/* Collapse/Expand Button */}
+          {/* Collapse/Expand Button - ALWAYS VISIBLE */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="absolute top-4 -right-3 z-10 p-1.5 bg-vibgyor-orange text-white rounded-full shadow-lg hover:bg-vibgyor-orange-dark transition-colors"
+            className={`absolute top-4 z-50 p-1.5 bg-vibgyor-orange text-white rounded-full shadow-lg hover:bg-vibgyor-orange-dark transition-all ${
+              sidebarCollapsed ? 'left-2' : '-right-3'
+            }`}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            data-testid="sidebar-toggle-button"
           >
             {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
