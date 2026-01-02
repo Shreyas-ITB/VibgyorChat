@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { MessageSquare, Users, Sun, Moon, LogOut, Search, Plus, X } from 'lucide-react';
+import { MessageSquare, Users, Sun, Moon, LogOut, Search, Plus, X, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { SocketProvider } from '../contexts/SocketContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -9,6 +9,7 @@ import { ChatList } from '../components/ChatList';
 import { ChatView } from '../components/ChatView';
 import { NewChatDialog } from '../components/NewChatDialog';
 import { ProfileDialog } from '../components/ProfileDialog';
+import { EditProfileDialog } from '../components/EditProfileDialog';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
