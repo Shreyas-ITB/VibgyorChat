@@ -25,8 +25,10 @@ export const DashboardPage = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [showNewChat, setShowNewChat] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('all'); // 'all', 'direct', 'groups'
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (location.state?.user) return;
