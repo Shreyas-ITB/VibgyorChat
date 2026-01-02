@@ -481,6 +481,15 @@ export const ChatView = ({ conversation, currentUser }) => {
           </div>
         )}
       </div>
+
+      {/* Group Info Dialog */}
+      {showGroupInfo && (
+        <GroupInfoDialog
+          conversation={conversation}
+          currentUser={currentUser}
+          onClose={() => setShowGroupInfo(false)}
+        />
+      )}
     </div>
   );
 };
