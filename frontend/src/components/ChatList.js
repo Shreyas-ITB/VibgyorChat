@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
@@ -10,7 +10,6 @@ export const ChatList = ({ conversations, selectedConversation, onSelectConversa
     
     // For direct chats, show the OTHER person's name
     if (conversation.participant_details && conversation.participant_details.length > 0) {
-      // Filter out the current user from participant details
       const otherParticipants = conversation.participant_details.filter(
         p => p.user_id !== currentUser.user_id
       );
@@ -25,7 +24,7 @@ export const ChatList = ({ conversations, selectedConversation, onSelectConversa
 
   const getConversationAvatar = (conversation) => {
     if (conversation.type === 'group') {
-      return null; // Could add group icon/image later
+      return conversation.picture ? process.env.REACT_APP_BACKEND_URL + conversation.picture : null;
     }
     
     // For direct chats, show the OTHER person's avatar
@@ -49,6 +48,25 @@ export const ChatList = ({ conversations, selectedConversation, onSelectConversa
       return msg.content.length > 50 ? msg.content.substring(0, 50) + '...' : msg.content;
     }
     return `[${msg.type}]`;
+  };
+
+  const getFormattedTime = (timestamp) => {
+    if (!timestamp) return '';
+    
+    try {
+      // Parse the timestamp - handle both string and Date object
+      const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return '';
+    }
   };
 
   return (
@@ -83,7 +101,7 @@ export const ChatList = ({ conversations, selectedConversation, onSelectConversa
                   <h3 className="font-medium text-foreground truncate">{convName}</h3>
                   {conv.last_message_at && (
                     <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                      {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
+                      {getFormattedTime(conv.last_message_at)}
                     </span>
                   )}
                 </div>
