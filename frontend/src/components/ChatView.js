@@ -395,8 +395,8 @@ export const ChatView = ({ conversation, currentUser }) => {
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages - FIXED SCROLLING */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(100vh - 280px)' }}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vibgyor-orange"></div>
@@ -411,6 +411,7 @@ export const ChatView = ({ conversation, currentUser }) => {
               key={message.message_id}
               message={message}
               currentUser={currentUser}
+              conversationId={conversation.conversation_id}
               onEdit={handleEditMessage}
               onDelete={handleDeleteMessage}
               onReact={handleReactToMessage}
