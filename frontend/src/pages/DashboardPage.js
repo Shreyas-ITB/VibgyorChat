@@ -214,7 +214,7 @@ export const DashboardPage = () => {
         </div>
 
         {/* Chat list sidebar - COLLAPSIBLE */}
-        <div className={`bg-card border-r border-border flex flex-col transition-all duration-300 ${
+        <div className={`bg-card border-r border-border flex flex-col transition-all duration-300 relative ${
           sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-full'
         }`}>
           {!sidebarCollapsed && (
