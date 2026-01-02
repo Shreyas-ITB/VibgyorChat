@@ -153,6 +153,9 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
         user_id: memberId
       }, { withCredentials: true });
       
+      // Update conversation state immediately
+      conversation.admins = [...(conversation.admins || []), memberId];
+      
       await fetchGroupData();
       onUpdate();
       toast.success('Member promoted to admin');
@@ -167,6 +170,9 @@ export const GroupInfoDialog = ({ conversation, currentUser, onClose, onUpdate }
       await axios.post(`${API}/groups/${conversation.conversation_id}/admins/demote`, {
         user_id: memberId
       }, { withCredentials: true });
+      
+      // Update conversation state immediately
+      conversation.admins = (conversation.admins || []).filter(id => id !== memberId);
       
       await fetchGroupData();
       onUpdate();
