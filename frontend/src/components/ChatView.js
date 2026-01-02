@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Send, Paperclip, Smile, Search, MoreVertical, Image as ImageIcon, Video, File, Info } from 'lucide-react';
+import { Send, Paperclip, Smile, Search, MoreVertical, Image as ImageIcon, Video, File, Info, Check } from 'lucide-react';
 import { useSocket } from '../contexts/SocketContext';
 import { MessageBubble } from './MessageBubble';
 import { GroupInfoDialog } from './GroupInfoDialog';
