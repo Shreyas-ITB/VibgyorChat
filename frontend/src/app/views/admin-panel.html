@@ -1,0 +1,397 @@
+<div class="min-h-screen h-screen flex flex-col overflow-hidden" style="background-color: var(--bg-primary); position: relative;">
+  <!-- Mosaic Particle Background -->
+  <div class="mosaic-bg" id="adminMosaicBg"></div>
+  <!-- Header -->
+  <div class="border-b px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0" style="background-color: var(--bg-secondary); border-color: var(--border-color); position: relative; z-index: 10;">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center" style="background-color: var(--text-primary);">
+          <svg class="w-4 h-4 sm:w-6 sm:h-6" style="color: var(--bg-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold text-white">Admin Panel</h1>
+          <p class="text-xs text-gray-400 hidden sm:block">Welcome, {{ adminUsername }}</p>
+        </div>
+      </div>
+      <button
+        ng-click="logout()"
+        class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-red-600 hover:bg-red-700 text-white"
+      >
+        Logout
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6" style="-webkit-overflow-scrolling: touch; position: relative; z-index: 1;">
+    <!-- Loading State -->
+    <div ng-if="loading && stats.totalUsers === 0" class="rounded-xl p-12 border text-center mb-8" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+      <div class="animate-spin w-12 h-12 border-4 border-t-transparent rounded-full mx-auto mb-4" style="border-color: var(--text-primary); border-top-color: transparent;"></div>
+      <p class="text-gray-400">Loading statistics...</p>
+    </div>
+
+    <!-- Error State -->
+    <div ng-if="error" class="rounded-xl p-6 border mb-8" style="background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <h3 class="text-red-400 font-semibold">Error Loading Statistics</h3>
+            <p class="text-red-300 text-sm">{{ error }}</p>
+          </div>
+        </div>
+        <button
+          ng-click="refreshStatistics()"
+          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-600 hover:bg-red-700 text-white"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Header with Refresh Button -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+      <div>
+        <h2 class="text-lg sm:text-xl font-bold text-white">Statistics Overview</h2>
+        <p class="text-xs sm:text-sm text-gray-400" ng-if="lastUpdated">Last updated: {{ lastUpdated | date:'short' }}</p>
+        <p class="text-xs sm:text-sm text-gray-400" ng-if="activeUsersPeriod">Active users period: {{ activeUsersPeriod }}</p>
+      </div>
+      <button
+        ng-click="refreshStatistics()"
+        ng-disabled="loading"
+        class="px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
+        ng-class="loading ? 'bg-gray-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'"
+        style="color: white;"
+      >
+        <svg ng-class="loading ? 'animate-spin' : ''" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
+      </button>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
+      <!-- Total Users -->
+      <div class="rounded-xl p-4 sm:p-6 border transition-all duration-300 hover:shadow-lg" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+        <div class="flex items-center justify-between mb-3 sm:mb-4">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-blue-600/20 flex items-center justify-center">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-2xl sm:text-3xl font-bold text-white mb-1">{{ stats.totalUsers }}</h3>
+        <p class="text-xs sm:text-sm text-gray-400">Total Users</p>
+        <p class="text-xs text-gray-500 mt-1 sm:mt-2" ng-if="breakdown.admin_users !== undefined">
+          {{ breakdown.admin_users }} admin, {{ breakdown.normal_users }} normal
+        </p>
+      </div>
+
+      <!-- Total Groups -->
+      <div class="rounded-xl p-4 sm:p-6 border transition-all duration-300 hover:shadow-lg" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+        <div class="flex items-center justify-between mb-3 sm:mb-4">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-green-600/20 flex items-center justify-center">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-2xl sm:text-3xl font-bold text-white mb-1">{{ stats.totalGroups }}</h3>
+        <p class="text-xs sm:text-sm text-gray-400">Total Groups</p>
+        <p class="text-xs text-gray-500 mt-1 sm:mt-2" ng-if="breakdown.groups_this_month !== undefined">
+          {{ breakdown.groups_this_month }} created this month
+        </p>
+      </div>
+
+      <!-- Total Messages -->
+      <div class="rounded-xl p-4 sm:p-6 border transition-all duration-300 hover:shadow-lg" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+        <div class="flex items-center justify-between mb-3 sm:mb-4">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-purple-600/20 flex items-center justify-center">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-2xl sm:text-3xl font-bold text-white mb-1">{{ stats.totalMessages }}</h3>
+        <p class="text-xs sm:text-sm text-gray-400">Total Messages</p>
+        <p class="text-xs text-gray-500 mt-1 sm:mt-2" ng-if="breakdown.messages_today !== undefined">
+          {{ breakdown.messages_today }} sent today
+        </p>
+      </div>
+
+      <!-- Active Users -->
+      <div class="rounded-xl p-4 sm:p-6 border transition-all duration-300 hover:shadow-lg" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+        <div class="flex items-center justify-between mb-3 sm:mb-4">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-yellow-600/20 flex items-center justify-center">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-2xl sm:text-3xl font-bold text-white mb-1">{{ stats.activeUsers }}</h3>
+        <p class="text-xs sm:text-sm text-gray-400">Active Users</p>
+        <p class="text-xs text-gray-500 mt-1 sm:mt-2" ng-if="breakdown.total_dms !== undefined">
+          {{ breakdown.total_dms }} active conversations
+        </p>
+      </div>
+    </div>
+
+    <!-- Employee Management Section -->
+    <div class="rounded-xl border" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+      <!-- Header -->
+      <div class="p-4 sm:p-6 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3" style="border-color: var(--border-color);">
+        <div>
+          <h2 class="text-lg sm:text-xl font-bold text-white">Employee Management</h2>
+          <p class="text-xs sm:text-sm text-gray-400 mt-1">Manage employees who can create groups and search users</p>
+        </div>
+        <button
+          ng-click="openAddEmployeeModal()"
+          class="px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center space-x-2 w-full sm:w-auto"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>Add Employee</span>
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div ng-if="employeesLoading" class="p-12 text-center">
+        <div class="animate-spin w-12 h-12 border-4 border-t-transparent rounded-full mx-auto mb-4" style="border-color: var(--text-primary); border-top-color: transparent;"></div>
+        <p class="text-gray-400">Loading employees...</p>
+      </div>
+
+      <!-- Error State -->
+      <div ng-if="employeesError" class="p-6 m-6 rounded-xl border" style="background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <h3 class="text-red-400 font-semibold">Error Loading Employees</h3>
+              <p class="text-red-300 text-sm">{{ employeesError }}</p>
+            </div>
+          </div>
+          <button
+            ng-click="fetchEmployees()"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-600 hover:bg-red-700 text-white"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+
+      <!-- Employees Table -->
+      <div ng-if="!employeesLoading && !employeesError" class="p-3 sm:p-4 md:p-6">
+        <!-- Empty State -->
+        <div ng-if="employees.length === 0" class="text-center py-8 sm:py-12">
+          <svg class="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+          </svg>
+          <h3 class="text-base sm:text-lg font-semibold text-gray-400 mb-2">No Employees Yet</h3>
+          <p class="text-xs sm:text-sm text-gray-500">Add your first employee to get started</p>
+        </div>
+
+        <!-- Employees List -->
+        <div ng-if="employees.length > 0" class="space-y-2 sm:space-y-3">
+          <div ng-repeat="employee in employees" class="rounded-lg p-3 sm:p-4 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:shadow-md transition-all" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+            <div class="flex items-center space-x-3 sm:space-x-4">
+              <img 
+                auth-image
+                ng-src="{{ employee.profile_picture }}" 
+                alt="{{ employee.name }}"
+                class="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover flex-shrink-0"
+              />
+              <div class="min-w-0 flex-1">
+                <h3 class="text-sm sm:text-base text-white font-semibold truncate">{{ employee.name }}</h3>
+                <p class="text-xs sm:text-sm text-gray-400 truncate">@{{ employee.username }}</p>
+                <p class="text-xs text-gray-500 mt-0.5 sm:mt-1">Employee ID: {{ employee.employ_id }}</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2 sm:space-x-2 w-full sm:w-auto">
+              <button
+                ng-click="openEditEmployeeModal(employee)"
+                class="flex-1 sm:flex-none px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-white"
+              >
+                Edit
+              </button>
+              <button
+                ng-click="confirmRemoveEmployee(employee)"
+                class="flex-1 sm:flex-none px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-red-600 hover:bg-red-700 text-white"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Employee Modal -->
+<div ng-if="showEmployeeModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style="background-color: rgba(0, 0, 0, 0.7);">
+  <div class="rounded-xl shadow-2xl max-w-md w-full border max-h-[90vh] overflow-y-auto" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+    <!-- Modal Header -->
+    <div class="p-4 sm:p-6 border-b sticky top-0 z-10" style="border-color: var(--border-color); background-color: var(--bg-secondary);">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg sm:text-xl font-bold text-white">{{ employeeModalMode === 'add' ? 'Add Employee' : 'Edit Employee' }}</h3>
+        <button ng-click="closeEmployeeModal()" class="text-gray-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-4 sm:p-6 space-y-3 sm:space-y-4">
+      <!-- Name Input -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Name *</label>
+        <input
+          type="text"
+          ng-model="employeeForm.name"
+          ng-disabled="employeeModalMode === 'edit'"
+          placeholder="Enter full name"
+          class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          style="background-color: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);"
+        />
+        <p class="text-xs text-gray-500 mt-1" ng-if="employeeModalMode === 'edit'">Name cannot be changed</p>
+      </div>
+
+      <!-- Username Input with Availability Check -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Username *</label>
+        <div class="relative">
+          <input
+            type="text"
+            ng-model="employeeForm.username"
+            ng-change="onEmployeeUsernameChange()"
+            ng-disabled="employeeModalMode === 'edit'"
+            placeholder="Enter username"
+            class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            style="background-color: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);"
+          />
+          <!-- Loading Spinner -->
+          <div ng-if="usernameChecking" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div class="animate-spin w-5 h-5 border-2 border-t-transparent rounded-full border-blue-500"></div>
+          </div>
+          <!-- Available Check -->
+          <div ng-if="!usernameChecking && usernameAvailable === true" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <!-- Not Available X -->
+          <div ng-if="!usernameChecking && usernameAvailable === false" class="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </div>
+        </div>
+        <p class="text-xs text-green-500 mt-1" ng-if="usernameAvailable === true">Username is available</p>
+        <p class="text-xs text-red-400 mt-1" ng-if="usernameAvailable === false">Username is not available</p>
+        <p class="text-xs text-gray-500 mt-1" ng-if="employeeModalMode === 'edit'">Username cannot be changed</p>
+        <p class="text-xs text-gray-500 mt-1" ng-if="usernameError && employeeModalMode === 'add'">{{ usernameError }}</p>
+      </div>
+
+      <!-- Email Input -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Email *</label>
+        <input
+          type="email"
+          ng-model="employeeForm.email"
+          ng-disabled="employeeModalMode === 'edit'"
+          placeholder="Enter email address"
+          class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          style="background-color: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);"
+        />
+        <p class="text-xs text-gray-500 mt-1" ng-if="employeeModalMode === 'edit'">Email cannot be changed</p>
+      </div>
+
+      <!-- Employee ID Input -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Employee ID *</label>
+        <input
+          type="text"
+          ng-model="employeeForm.employ_id"
+          placeholder="Enter employee ID"
+          class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          style="background-color: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);"
+        />
+      </div>
+
+      <!-- Error Message -->
+      <div ng-if="employeeFormError" class="p-3 rounded-lg border" style="background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+        <p class="text-sm text-red-400">{{ employeeFormError }}</p>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="p-4 sm:p-6 border-t flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3 sticky bottom-0 z-10" style="border-color: var(--border-color); background-color: var(--bg-secondary);">
+      <button
+        ng-click="closeEmployeeModal()"
+        class="w-full sm:w-auto px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-white"
+      >
+        Cancel
+      </button>
+      <button
+        ng-click="saveEmployee()"
+        ng-disabled="employeeFormLoading"
+        class="w-full sm:w-auto px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-white"
+        ng-class="employeeFormLoading ? 'bg-gray-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'"
+      >
+        {{ employeeFormLoading ? 'Saving...' : (employeeModalMode === 'add' ? 'Add Employee' : 'Save Changes') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Remove Employee Modal -->
+<div ng-if="showRemoveConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style="background-color: rgba(0, 0, 0, 0.7);">
+  <div class="rounded-xl shadow-2xl max-w-md w-full border" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+    <!-- Modal Header -->
+    <div class="p-4 sm:p-6 border-b" style="border-color: var(--border-color);">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg sm:text-xl font-bold text-white">Confirm Remove Employee</h3>
+        <button ng-click="closeRemoveConfirmModal()" class="text-gray-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-4 sm:p-6">
+      <p class="text-sm sm:text-base text-gray-300">Are you sure you want to remove <strong class="text-white">{{ employeeToRemove.name }}</strong> (@{{ employeeToRemove.username }}) as an employee?</p>
+      <p class="text-xs sm:text-sm text-gray-400 mt-2">This will revoke their employee privileges.</p>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="p-4 sm:p-6 border-t flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3" style="border-color: var(--border-color);">
+      <button
+        ng-click="closeRemoveConfirmModal()"
+        class="w-full sm:w-auto px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-white"
+      >
+        Cancel
+      </button>
+      <button
+        ng-click="removeEmployee()"
+        ng-disabled="removeEmployeeLoading"
+        class="w-full sm:w-auto px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-white"
+        ng-class="removeEmployeeLoading ? 'bg-gray-700 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'"
+      >
+        {{ removeEmployeeLoading ? 'Removing...' : 'Remove Employee' }}
+      </button>
+    </div>
+  </div>
+  </div>
+</div>
