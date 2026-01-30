@@ -1,0 +1,270 @@
+{
+  "group_join_request_system": {
+    "description": "Complete API examples for the group join request approval system",
+    
+    "1_request_to_join": {
+      "description": "User requests to join a group (creates pending request)",
+      "method": "POST",
+      "endpoint": "/conversations/group/join",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "payload": {
+        "conversation_id": "65abc123def456789"
+      },
+      "response_example": {
+        "success": true,
+        "conversation_id": "65abc123def456789",
+        "message": "Join request sent. Waiting for admin approval.",
+        "status": "pending",
+        "group_name": "My Awesome Group",
+        "requested_at": "2024-01-25T10:30:00Z"
+      },
+      "socket_event_sent": {
+        "event_name": "group_join_request",
+        "sent_to": "All online admins and owner",
+        "data": {
+          "type": "join_request",
+          "conversation_id": "65abc123def456789",
+          "group_name": "My Awesome Group",
+          "requester": {
+            "email": "user@example.com",
+            "name": "John Doe",
+            "username": "johndoe",
+            "profile_picture": "https://..."
+          },
+          "requested_at": "2024-01-25T10:30:00Z",
+          "message": "John Doe wants to join My Awesome Group"
+        }
+      }
+    },
+    
+    "2_get_pending_requests": {
+      "description": "Admin/Owner views all pending join requests",
+      "method": "GET",
+      "endpoint": "/conversations/group/join/pending?conversation_id=65abc123def456789",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+      },
+      "who_can_access": "Only group owner or admins",
+      "response_example": {
+        "success": true,
+        "conversation_id": "65abc123def456789",
+        "group_name": "My Awesome Group",
+        "pending_requests": [
+          {
+            "email": "user@example.com",
+            "requested_at": "2024-01-25T10:30:00Z",
+            "status": "pending",
+            "user_info": {
+              "name": "John Doe",
+              "username": "johndoe",
+              "profile_picture": "https://...",
+              "created_at": "2024-01-01T00:00:00Z"
+            }
+          }
+        ],
+        "count": 1
+      }
+    },
+    
+    "3_approve_request": {
+      "description": "Admin/Owner approves a join request",
+      "method": "POST",
+      "endpoint": "/conversations/group/join/approve",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "payload": {
+        "conversation_id": "65abc123def456789",
+        "requester_email": "user@example.com"
+      },
+      "who_can_access": "Only group owner or admins",
+      "response_example": {
+        "success": true,
+        "conversation_id": "65abc123def456789",
+        "requester_email": "user@example.com",
+        "message": "Successfully approved user@example.com to join the group",
+        "action": "approved"
+      },
+      "socket_events_sent": {
+        "to_requester": {
+          "event_name": "group_join_approved",
+          "data": {
+            "type": "join_request_approved",
+            "conversation_id": "65abc123def456789",
+            "group_name": "My Awesome Group",
+            "approved_by": "admin@example.com",
+            "message": "Your request to join My Awesome Group has been approved"
+          }
+        },
+        "to_other_admins": {
+          "event_name": "group_join_request_update",
+          "data": {
+            "type": "join_request_processed",
+            "conversation_id": "65abc123def456789",
+            "group_name": "My Awesome Group",
+            "requester_email": "user@example.com",
+            "action": "approved",
+            "processed_by": "admin@example.com"
+          }
+        }
+      }
+    },
+    
+    "4_reject_request": {
+      "description": "Admin/Owner rejects a join request",
+      "method": "POST",
+      "endpoint": "/conversations/group/join/reject",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "payload": {
+        "conversation_id": "65abc123def456789",
+        "requester_email": "user@example.com"
+      },
+      "who_can_access": "Only group owner or admins",
+      "response_example": {
+        "success": true,
+        "conversation_id": "65abc123def456789",
+        "requester_email": "user@example.com",
+        "message": "Successfully rejected user@example.com's join request",
+        "action": "rejected"
+      },
+      "socket_events_sent": {
+        "to_requester": {
+          "event_name": "group_join_rejected",
+          "data": {
+            "type": "join_request_rejected",
+            "conversation_id": "65abc123def456789",
+            "group_name": "My Awesome Group",
+            "rejected_by": "admin@example.com",
+            "message": "Your request to join My Awesome Group has been rejected"
+          }
+        },
+        "to_other_admins": {
+          "event_name": "group_join_request_update",
+          "data": {
+            "type": "join_request_processed",
+            "conversation_id": "65abc123def456789",
+            "group_name": "My Awesome Group",
+            "requester_email": "user@example.com",
+            "action": "rejected",
+            "processed_by": "admin@example.com"
+          }
+        }
+      }
+    },
+    
+    "5_get_my_pending_requests": {
+      "description": "User views their own pending join requests",
+      "method": "GET",
+      "endpoint": "/conversations/group/join/my-pending",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+      },
+      "who_can_access": "Any authenticated user",
+      "response_example": {
+        "success": true,
+        "pending_requests": [
+          {
+            "conversation_id": "65abc123def456789",
+            "group_name": "My Awesome Group",
+            "group_description": "A great group for awesome people",
+            "group_picture": "https://...",
+            "requested_at": "2024-01-25T10:30:00Z",
+            "status": "pending",
+            "participant_count": 15,
+            "owner": "owner@example.com",
+            "admins": ["admin1@example.com", "admin2@example.com"]
+          },
+          {
+            "conversation_id": "65def456abc789012",
+            "group_name": "Another Group",
+            "group_description": "Another cool group",
+            "group_picture": "https://...",
+            "requested_at": "2024-01-24T15:20:00Z",
+            "status": "pending",
+            "participant_count": 8,
+            "owner": "owner2@example.com",
+            "admins": []
+          }
+        ],
+        "count": 2
+      },
+      "note": "Returns all groups where the current user has a pending join request"
+    },
+    
+    "6_cancel_join_request": {
+      "description": "User cancels their own pending join request",
+      "method": "POST",
+      "endpoint": "/conversations/group/join/cancel",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN",
+        "Content-Type": "application/json"
+      },
+      "payload": {
+        "conversation_id": "65abc123def456789"
+      },
+      "who_can_access": "Any authenticated user (can only cancel their own requests)",
+      "response_example": {
+        "success": true,
+        "conversation_id": "65abc123def456789",
+        "group_name": "My Awesome Group",
+        "message": "Successfully cancelled your join request for My Awesome Group",
+        "action": "cancelled"
+      },
+      "socket_event_sent": {
+        "event_name": "group_join_request_cancelled",
+        "sent_to": "All online admins and owner",
+        "data": {
+          "type": "join_request_cancelled",
+          "conversation_id": "65abc123def456789",
+          "group_name": "My Awesome Group",
+          "requester_email": "user@example.com",
+          "message": "user@example.com cancelled their join request for My Awesome Group"
+        }
+      },
+      "note": "User can cancel their pending request at any time before it's approved/rejected"
+    }
+  },
+  
+  "socket_io_events_summary": {
+    "description": "All Socket.IO events for the join request system",
+    "events": [
+      {
+        "event_name": "group_join_request",
+        "direction": "Server → Admins/Owner",
+        "when": "When a user requests to join",
+        "listen_on_frontend": "socket.on('group_join_request', (data) => { ... })"
+      },
+      {
+        "event_name": "group_join_approved",
+        "direction": "Server → Requester",
+        "when": "When admin approves the request",
+        "listen_on_frontend": "socket.on('group_join_approved', (data) => { ... })"
+      },
+      {
+        "event_name": "group_join_rejected",
+        "direction": "Server → Requester",
+        "when": "When admin rejects the request",
+        "listen_on_frontend": "socket.on('group_join_rejected', (data) => { ... })"
+      },
+      {
+        "event_name": "group_join_request_update",
+        "direction": "Server → Other Admins",
+        "when": "When one admin processes a request",
+        "listen_on_frontend": "socket.on('group_join_request_update', (data) => { ... })"
+      },
+      {
+        "event_name": "group_join_request_cancelled",
+        "direction": "Server → Admins/Owner",
+        "when": "When a user cancels their join request",
+        "listen_on_frontend": "socket.on('group_join_request_cancelled', (data) => { ... })"
+      }
+    ]
+  }
+}

@@ -1,0 +1,257 @@
+{
+  "rest_api_endpoints": {
+    "leave_group": {
+      "description": "Leave a group conversation",
+      "method": "POST",
+      "endpoint": "/conversations/leave",
+      "payload": {
+        "conversation_id": "YOUR_CONVERSATION_ID"
+      }
+    },
+    "get_blocked_users": {
+      "description": "Get all blocked users from the current user's contacts",
+      "method": "GET",
+      "endpoint": "/users/blocked",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+      }
+    },
+    "check_username_with_token": {
+      "description": "Check username availability using JWT token",
+      "method": "GET",
+      "endpoint": "/auth/login/checkusername?q=desired_username",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+      }
+    },
+    "check_username_with_admin": {
+      "description": "Check username availability using admin credentials",
+      "method": "GET",
+      "endpoint": "/auth/login/checkusername?q=desired_username&admin_username_hash=HASH&admin_password_hash=HASH"
+    },
+    "remove_employee": {
+      "description": "Remove an employee account (Admin only)",
+      "method": "DELETE",
+      "endpoint": "/admin/remove-employee",
+      "payload": {
+        "employ_id": "EMP123",
+        "admin_username_hash": "ADMIN_USERNAME_HASH",
+        "admin_password_hash": "ADMIN_PASSWORD_HASH"
+      }
+    },
+    "get_allowed_domains": {
+      "description": "Get allowed email domains for employee accounts (Admin only)",
+      "method": "GET",
+      "endpoint": "/admin/allowed-domains?admin_username_hash=HASH&admin_password_hash=HASH",
+      "response": {
+        "success": true,
+        "allowed_domains": ["@vibgyor.co.in", "@company.com"],
+        "note": "Only emails ending with these domains can be created as employees"
+      }
+    },
+    "export_group_chat": {
+      "description": "Export group chat to CSV (includes group name and description)",
+      "method": "GET",
+      "endpoint": "/backup/export/group/chat?conversation_id=YOUR_CONVERSATION_ID"
+    },
+    "import_group_chat": {
+      "description": "Import group chat from CSV (reads group info from CSV)",
+      "method": "POST",
+      "endpoint": "/backup/import/group/chat",
+      "content_type": "multipart/form-data",
+      "payload": {
+        "file": "CSV_FILE"
+      }
+    },
+    "upload_message_file": {
+      "description": "Upload file/image/video via HTTP (RECOMMENDED - more reliable than Socket.IO)",
+      "method": "POST",
+      "endpoint": "/messages/upload",
+      "content_type": "multipart/form-data",
+      "headers": {
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+      },
+      "form_fields": {
+        "file": "FILE_TO_UPLOAD (required)",
+        "conversation_id": "CONVERSATION_ID (required)",
+        "content": "Optional caption/text",
+        "reply_to": "Optional message_id to reply to"
+      },
+      "response": {
+        "success": true,
+        "message": {
+          "_id": "507f1f77bcf86cd799439011",
+          "type": "video",
+          "media_url": "/uploads/chats/507f1f77bcf86cd799439011/video.mp4"
+        }
+      },
+      "notes": [
+        "Use this for ALL file uploads, especially videos",
+        "More reliable than Socket.IO - no disconnections",
+        "Supports progress tracking",
+        "Automatically detects file type (image/video/file)"
+      ]
+    }
+  },
+  
+  "socket_events": {
+    "message_pinned": {
+      "description": "Emitted when a message is pinned or unpinned",
+      "event_name": "message_pinned",
+      "direction": "server_to_client",
+      "data": {
+        "message_id": "507f1f77bcf86cd799439011",
+        "pinned": true,
+        "pinned_by": "shreyas@example.com",
+        "pinned_at": "2024-01-25T12:00:00Z",
+        "message_sender": "sunil@example.com",
+        "message_content": "hello"
+      },
+      "notes": [
+        "pinned_by shows who actually pinned the message (not the message author)",
+        "Use pinned_by to display correct notification: '{pinned_by} pinned a message'",
+        "For old messages, pinned_by may be null - fallback to message_sender"
+      ]
+    },
+    
+    "toggle_pin_message": {
+      "description": "Client sends this to pin/unpin a message",
+      "event_name": "toggle_pin_message",
+      "direction": "client_to_server",
+      "data": {
+        "message_id": "507f1f77bcf86cd799439011"
+      }
+    },
+    
+    "new_message": {
+      "description": "Emitted when a new message is sent to a conversation",
+      "event_name": "new_message",
+      "direction": "server_to_client",
+      "data": {
+        "_id": "507f1f77bcf86cd799439011",
+        "conversation_id": "507f1f77bcf86cd799439012",
+        "sender": "user@example.com",
+        "content": "Hello world",
+        "type": "text",
+        "media_url": null,
+        "reply_to": null,
+        "is_deleted": false,
+        "created_at": "2024-01-25T12:00:00Z",
+        "edited_at": null,
+        "pinned": false
+      }
+    },
+    
+    "new_message_broadcast": {
+      "description": "Broadcast to all participants (even if not in room)",
+      "event_name": "new_message_broadcast",
+      "direction": "server_to_client",
+      "data": {
+        "_id": "507f1f77bcf86cd799439011",
+        "conversation_id": "507f1f77bcf86cd799439012",
+        "sender": "user@example.com",
+        "content": "Hello world",
+        "type": "text",
+        "created_at": "2024-01-25T12:00:00Z",
+        "conversation_info": {
+          "conversation_id": "507f1f77bcf86cd799439012",
+          "type": "group",
+          "group_name": "My Group",
+          "participants": ["user1@example.com", "user2@example.com"]
+        },
+        "user_status": {
+          "is_active_in_room": false,
+          "should_notify": true
+        },
+        "timestamp": "2024-01-25T12:00:00Z"
+      }
+    },
+    
+    "typing": {
+      "description": "User is typing in a conversation",
+      "event_name": "typing",
+      "direction": "bidirectional",
+      "client_sends": {
+        "conversation_id": "507f1f77bcf86cd799439012"
+      },
+      "server_emits": {
+        "conversation_id": "507f1f77bcf86cd799439012",
+        "user": "user@example.com"
+      }
+    },
+    
+    "stop_typing": {
+      "description": "User stopped typing",
+      "event_name": "stop_typing",
+      "direction": "bidirectional",
+      "client_sends": {
+        "conversation_id": "507f1f77bcf86cd799439012"
+      },
+      "server_emits": {
+        "conversation_id": "507f1f77bcf86cd799439012",
+        "user": "user@example.com"
+      }
+    },
+    
+    "presence_online": {
+      "description": "User goes online",
+      "event_name": "presence_online",
+      "direction": "client_to_server"
+    },
+    
+    "presence_idle": {
+      "description": "User goes idle",
+      "event_name": "presence_idle",
+      "direction": "client_to_server"
+    },
+    
+    "presence_update": {
+      "description": "Broadcast when user status changes",
+      "event_name": "presence_update",
+      "direction": "server_to_client",
+      "data": {
+        "user": "user@example.com",
+        "status": "online",
+        "last_seen": "2024-01-25T12:00:00Z"
+      }
+    },
+    
+    "join_conversation": {
+      "description": "Join a conversation room",
+      "event_name": "join_conversation",
+      "direction": "client_to_server",
+      "data": {
+        "conversation_id": "507f1f77bcf86cd799439012"
+      }
+    },
+    
+    "leave_conversation": {
+      "description": "Leave a conversation room",
+      "event_name": "leave_conversation",
+      "direction": "client_to_server",
+      "data": {
+        "conversation_id": "507f1f77bcf86cd799439012"
+      }
+    },
+    
+    "message_edited": {
+      "description": "Message was edited",
+      "event_name": "message_edited",
+      "direction": "server_to_client",
+      "data": {
+        "message_id": "507f1f77bcf86cd799439011",
+        "new_content": "Updated message",
+        "edited_at": "2024-01-25T12:00:00Z"
+      }
+    },
+    
+    "message_deleted": {
+      "description": "Message was deleted",
+      "event_name": "message_deleted",
+      "direction": "server_to_client",
+      "data": {
+        "message_id": "507f1f77bcf86cd799439011"
+      }
+    }
+  }
+}

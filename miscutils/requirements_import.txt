@@ -1,0 +1,2 @@
+# Requirements for batch employee import script
+requests>=2.28.0
