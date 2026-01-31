@@ -1,1 +1,0 @@
-# Vibgyor Chat Application
