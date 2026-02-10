@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>VibgyorChat</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
+    <meta property="og:image" content="https://raw.githubusercontent.com/Shreyas-ITB/VibgyorChat/refs/heads/main/assets/og_default.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/Shreyas-ITB/VibgyorChat/refs/heads/main/assets/og_default.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="/src/app/public/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/src/app/public/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/src/app/public/favicon-16x16.png">
+    <link rel="manifest" href="/src/app/public/site.webmanifest">
+    
+    <!-- Coloris.js Color Picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.css"/>
+    <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
+  </head>
+  <body>
+    <div ng-view class="app-container"></div>
+
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
