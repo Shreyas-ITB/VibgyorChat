@@ -3353,9 +3353,27 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
   $scope.parseMentions = function(content) {
     if (!content) return content;
     
-    // Find all @username patterns (word characters only)
-    const mentionRegex = /@(\w+)/g;
     let result = content;
+    
+    // First, parse URLs and make them clickable
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    result = result.replace(urlRegex, function(url) {
+      // Remove trailing punctuation that might be part of the sentence
+      let cleanUrl = url;
+      let trailingPunctuation = '';
+      
+      // Check for trailing punctuation
+      const punctuationMatch = url.match(/([.,;:!?)\]]+)$/);
+      if (punctuationMatch) {
+        trailingPunctuation = punctuationMatch[1];
+        cleanUrl = url.slice(0, -trailingPunctuation.length);
+      }
+      
+      return '<a href="' + cleanUrl + '" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline">' + cleanUrl + '</a>' + trailingPunctuation;
+    });
+    
+    // Then, find all @username patterns (word characters only)
+    const mentionRegex = /@(\w+)/g;
     
     result = result.replace(mentionRegex, function(match, username) {
       // Check if this is a role mention first (for groups)
@@ -3507,6 +3525,49 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
       }
     }
     // For Shift+Enter or other keys, allow default behavior
+  };
+
+  // Handle paste events to detect pasted images
+  $scope.handlePaste = function(event) {
+    const clipboardData = event.clipboardData || event.originalEvent.clipboardData;
+    
+    if (!clipboardData || !clipboardData.items) {
+      return;
+    }
+    
+    // Check if there are any image items in the clipboard
+    const items = clipboardData.items;
+    let hasImage = false;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      // Check if the item is an image
+      if (item.type.indexOf('image') !== -1) {
+        hasImage = true;
+        event.preventDefault(); // Prevent default paste behavior for images
+        
+        // Get the image file from clipboard
+        const file = item.getAsFile();
+        
+        if (file) {
+          // Validate file size (5MB limit for images)
+          if (!$scope.validateFileSize(file, 5, 'image')) {
+            return;
+          }
+          
+          // Stage the pasted image for preview
+          $timeout(function() {
+            $scope.stageFileForPreview(file, 'image');
+            ToastService.success('Image pasted! Press Enter to send.');
+          });
+        }
+        
+        break; // Only handle the first image
+      }
+    }
+    
+    // If no image was found, allow default paste behavior (text)
   };
 
   // File attachment functions with safer approach
@@ -7763,7 +7824,7 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
 
   $scope.downloadMediaFile = function(message) {
     // For images, check if we should open lightbox or download
-    if (message.isImage && message.imageUrl && message.file_name) {
+    if (message.isImage && message.imageUrl) {
       // Open lightbox instead of downloading
       $scope.openLightbox(message.imageUrl, $scope.getAllImageUrls());
       return;
