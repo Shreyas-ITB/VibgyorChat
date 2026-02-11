@@ -943,134 +943,83 @@
                 </div>
               </div>
 
-              <!-- Regular contacts (non-archived) -->
+              <!-- Unified chats list (contacts and groups mixed, sorted by last message time) -->
               <div
-                ng-repeat="contact in filteredContacts"
-                ng-click="selectContactMobile(contact)"
-                ng-right-click="showContextMenu($event, contact)"
-                ng-class="{ 'hover:bg-gray-800': !selectedContact || selectedContact.email !== contact.email }"
-                ng-style="selectedContact && selectedContact.email === contact.email ? {'background-color': 'rgba(255, 255, 255, 0.1)', 'border-color': 'var(--text-primary)'} : {}"
+                ng-repeat="chat in filteredChats"
+                ng-click="chat.isGroup ? selectGroupMobile(chat) : selectContactMobile(chat)"
+                ng-right-click="showContextMenu($event, chat)"
+                ng-class="{ 'hover:bg-gray-800': !selectedContact || (chat.isGroup ? selectedContact.conversation_id !== chat.conversation_id : selectedContact.email !== chat.email) }"
+                ng-style="selectedContact && (chat.isGroup ? selectedContact.conversation_id === chat.conversation_id : selectedContact.email === chat.email) ? {'background-color': 'rgba(255, 255, 255, 0.1)', 'border-color': 'var(--text-primary)'} : {}"
                 class="p-4 rounded-xl cursor-pointer transition-all duration-200 border border-transparent mb-2 group contact-card-compact"
               >
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <img
-                      ng-src="{{ getProfilePicture(contact.profile_picture) }}"
-                      auth-image="{{ getProfilePicture(contact.profile_picture) }}"
-                      alt="{{ contact.username }}"
+                      ng-if="!chat.isGroup"
+                      ng-src="{{ getProfilePicture(chat.profile_picture) }}"
+                      auth-image="{{ getProfilePicture(chat.profile_picture) }}"
+                      alt="{{ chat.username }}"
                       class="w-12 h-12 rounded-full ring-2 ring-gray-700 transition-all duration-200"
                     >
-                    <!-- Online/Idle/Offline status dot (always visible) -->
+                    <img
+                      ng-if="chat.isGroup"
+                      ng-src="{{ getGroupPicture(chat) }}"
+                      alt="{{ chat.name }}"
+                      class="w-12 h-12 rounded-full ring-2 ring-gray-700 transition-all duration-200"
+                    >
+                    <!-- Online/Idle/Offline status dot (only for contacts, not groups) -->
                     <div
+                      ng-if="!chat.isGroup"
                       class="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-gray-900"
                       ng-class="{
-                        'bg-green-500': contact.online && !contact.idle,
-                        'bg-yellow-500': contact.idle,
-                        'bg-gray-500': !contact.online && !contact.idle
+                        'bg-green-500': chat.online && !chat.idle,
+                        'bg-yellow-500': chat.idle,
+                        'bg-gray-500': !chat.online && !chat.idle
                       }"
                     ></div>
                   </div>
 
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between">
-                      <h3 class="text-sm font-semibold text-white truncate flex items-center space-x-2" ng-class="{'font-bold': contact.unreadCount > 0}">
-                        <span>{{ contact.name || contact.username }}</span>
+                      <h3 class="text-sm font-semibold text-white truncate flex items-center space-x-2" ng-class="{'font-bold': chat.unreadCount > 0}">
+                        <span>{{ chat.name || chat.username }}</span>
                         <!-- Pin icon - push pin (white) -->
-                        <svg ng-if="contact.pinned" class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24" title="Pinned">
+                        <svg ng-if="chat.pinned" class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24" title="Pinned">
                           <path d="M7.084 11.457C5.782 12.325 5 12.709 5 14.274V15h7v7l.5 1 .5-1v-7h7v-.726c0-1.565-.782-1.95-2.084-2.817l-1.147-.765L15 4l1.522-.43A2.029 2.029 0 0 0 18 1.619V1H7v.618A2.029 2.029 0 0 0 8.478 3.57L10 4l-1.77 6.692zM16.93 12l.73.485c1 .659 1.28.866 1.332 1.515H6.009c.051-.65.332-.856 1.333-1.515L8.07 12zM8.75 2.608A1.033 1.033 0 0 1 8.075 2h8.852a1.033 1.033 0 0 1-.676.608L14.862 3h-4.724zM11.035 4h2.931l1.85 7h-6.63z"></path>
                         </svg>
                         <!-- Favorite icon - yellow star -->
-                        <svg ng-if="contact.is_favorited" class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24" title="Favorite">
+                        <svg ng-if="chat.is_favorited || chat.favorited" class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24" title="Favorite">
                           <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
                         </svg>
                         <!-- Mute icon - red speaker with X -->
-                        <svg ng-if="contact.muted" class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Muted">
+                        <svg ng-if="chat.muted" class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Muted">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path>
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
                         </svg>
                       </h3>
                       <div class="flex flex-col items-end relative">
-                        <span class="text-xs text-gray-500" ng-if="contact.lastMessageTime && !contact.isTyping">
-                          {{ contact.lastMessageTime | discordTimeCompact }}
+                        <span class="text-xs text-gray-500" ng-if="chat.lastMessageTime && (!chat.isTyping || chat.isGroup)">
+                          {{ chat.lastMessageTime | discordTimeCompact }}
                         </span>
                         <!-- Unread count badge - positioned below time exactly where the red dot is -->
-                        <span ng-if="contact.unreadCount > 0" class="unread-badge-whatsapp-positioned absolute" style="top: 18px; right: 0;">
-                          {{ contact.unreadCount > 99 ? '99+' : contact.unreadCount }}
+                        <span ng-if="chat.unreadCount > 0" class="unread-badge-whatsapp-positioned absolute" style="top: 18px; right: 0;">
+                          {{ chat.unreadCount > 99 ? '99+' : chat.unreadCount }}
                         </span>
                       </div>
                     </div>
-                    <!-- Show "Typing..." when user is typing, otherwise show draft or last message -->
-                    <p ng-if="contact.isTyping" class="text-xs text-green-500 font-medium contact-message-tight">
+                    <!-- Show "Typing..." when user is typing (only for contacts), otherwise show draft or last message -->
+                    <p ng-if="!chat.isGroup && chat.isTyping" class="text-xs text-green-500 font-medium contact-message-tight">
                       Typing...
                     </p>
-                    <p ng-if="!contact.isTyping && hasDraft(contact)" class="text-xs truncate contact-message-tight">
+                    <p ng-if="(!chat.isTyping || chat.isGroup) && hasDraft(chat)" class="text-xs truncate contact-message-tight">
                       <span class="text-yellow-400 font-medium">Draft:</span>
-                      <span class="text-gray-400">{{ getDraftText(contact) }}</span>
+                      <span class="text-gray-400">{{ getDraftText(chat) }}</span>
                     </p>
-                    <p ng-if="!contact.isTyping && !hasDraft(contact)" class="text-xs truncate contact-message-tight" ng-class="[
-                      contact.lastMessageContent === 'This message was deleted' ? 'text-gray-500 italic' : 'text-gray-400',
-                      {'font-bold text-white': contact.isNewMessage}
+                    <p ng-if="(!chat.isTyping || chat.isGroup) && !hasDraft(chat)" class="text-xs truncate contact-message-tight" ng-class="[
+                      chat.lastMessageContent === 'This message was deleted' ? 'text-gray-500 italic' : 'text-gray-400',
+                      {'font-bold text-white': chat.isNewMessage}
                     ]">
-                      {{ contact.lastMessageContent || 'No messages yet' }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Groups (displayed in chats section) -->
-              <div
-                ng-repeat="group in filteredGroups"
-                ng-click="selectGroupMobile(group)"
-                ng-right-click="showContextMenu($event, group)"
-                ng-class="{ 'hover:bg-gray-800': !selectedContact || selectedContact.conversation_id !== group.conversation_id }"
-                ng-style="selectedContact && selectedContact.conversation_id === group.conversation_id ? {'background-color': 'rgba(255, 255, 255, 0.1)', 'border-color': 'var(--text-primary)'} : {}"
-                class="p-4 rounded-xl cursor-pointer transition-all duration-200 border border-transparent mb-2 group contact-card-compact"
-              >
-                <div class="flex items-center space-x-3">
-                  <div class="relative">
-                    <img
-                      ng-src="{{ getGroupPicture(group) }}"
-                      alt="{{ group.name }}"
-                      class="w-12 h-12 rounded-full ring-2 ring-gray-700 transition-all duration-200"
-                    >
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between">
-                      <h3 class="text-sm font-semibold text-white truncate flex items-center space-x-2" ng-class="{'font-bold': group.unreadCount > 0}">
-                        <span>{{ group.name }}</span>
-                        <!-- Pin icon -->
-                        <svg ng-if="group.pinned" class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24" title="Pinned">
-                          <path d="M7.084 11.457C5.782 12.325 5 12.709 5 14.274V15h7v7l.5 1 .5-1v-7h7v-.726c0-1.565-.782-1.95-2.084-2.817l-1.147-.765L15 4l1.522-.43A2.029 2.029 0 0 0 18 1.619V1H7v.618A2.029 2.029 0 0 0 8.478 3.57L10 4l-1.77 6.692zM16.93 12l.73.485c1 .659 1.28.866 1.332 1.515H6.009c.051-.65.332-.856 1.333-1.515L8.07 12zM8.75 2.608A1.033 1.033 0 0 1 8.075 2h8.852a1.033 1.033 0 0 1-.676.608L14.862 3h-4.724zM11.035 4h2.931l1.85 7h-6.63z"></path>
-                        </svg>
-                        <!-- Favorite icon -->
-                        <svg ng-if="group.is_favorited" class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24" title="Favorite">
-                          <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                        </svg>
-                        <!-- Mute icon -->
-                        <svg ng-if="group.muted" class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Muted">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path>
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
-                        </svg>
-                      </h3>
-                      <div class="flex flex-col items-end relative">
-                        <span class="text-xs text-gray-500" ng-if="group.lastMessageTime">
-                          {{ group.lastMessageTime | discordTimeCompact }}
-                        </span>
-                        <!-- Unread count badge -->
-                        <span ng-if="group.unreadCount > 0" class="unread-badge-whatsapp-positioned absolute" style="top: 18px; right: 0;">
-                          {{ group.unreadCount > 99 ? '99+' : group.unreadCount }}
-                        </span>
-                      </div>
-                    </div>
-                    <p ng-if="hasDraft(group)" class="text-xs truncate contact-message-tight">
-                      <span class="text-yellow-400 font-medium">Draft:</span>
-                      <span class="text-gray-400">{{ getDraftText(group) }}</span>
-                    </p>
-                    <p ng-if="!hasDraft(group)" class="text-xs truncate contact-message-tight" ng-class="[
-                      group.lastMessageContent === 'This message was deleted' ? 'text-gray-500 italic' : 'text-gray-400',
-                      {'font-bold text-white': group.isNewMessage}
-                    ]">
-                      {{ group.lastMessageContent || 'No messages yet' }}
+                      {{ chat.lastMessageContent || 'No messages yet' }}
                     </p>
                   </div>
                 </div>
@@ -3454,7 +3403,7 @@
                 ng-class="{'bg-gray-800': showJoinRequestsPopup}"
               >
                 <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                 </svg>
                 <!-- Red dot notification for new join requests -->
                 <span 
@@ -3480,7 +3429,7 @@
                 <div class="pinned-messages-header">
                   <div class="flex items-center gap-2">
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                     </svg>
                     <h3 class="text-base font-semibold text-white">Join Requests</h3>
                     <span ng-if="joinRequests.length > 0" class="ml-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-600 text-white">
@@ -6671,5 +6620,3 @@
       </div>
     </div>
   </div>
-
-
