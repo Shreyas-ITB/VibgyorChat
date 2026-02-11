@@ -3579,7 +3579,7 @@
                     <!-- Message Body -->
                     <div class="message-content" style="text-align: left; display: block; width: 100%;">
                       <!-- Text content -->
-                      <p ng-if="message.content && message.type === 'text'" class="text-gray-100 leading-relaxed whitespace-pre-wrap" style="text-align: left; margin: 0; padding: 0; display: block;">{{ message.content }}</p>
+                      <p ng-if="message.content && message.type === 'text'" class="text-gray-100 leading-relaxed whitespace-pre-wrap" style="text-align: left; margin: 0; padding: 0; display: block;" render-mentions="parseMentions(message.content)"></p>
                       
                       <!-- Image Message -->
                       <div ng-if="message.type === 'image' && message.imageUrl && !isMessageDeleted(message) && (!selectedContact.isGroup || !isImportedGroup(selectedContact))" class="mt-2">
@@ -4793,6 +4793,7 @@
                   ng-model="messageInput"
                   ng-change="onMessageInput()"
                   ng-keydown="onMessageKeyDown($event)"
+                  ng-paste="handlePaste($event)"
                   ng-attr-placeholder="{{ filePreviews.length > 0 ? 'Press Enter to send your attachments...' : 'Type your message...' }}"
                   ng-readonly="filePreviews.length > 0"
                   class="w-full bg-transparent px-4 py-3 pr-12 focus:outline-none resize-none rounded-2xl flex-1 custom-scrollbar placeholder-gray-400"
@@ -5560,7 +5561,7 @@
                       <span class="text-xs text-gray-400">{{ message.created_at | discordTime }}</span>
                     </div>
                     <div class="message-content">
-                      <p ng-if="message.content && message.type === 'text'" class="text-gray-100 leading-relaxed whitespace-pre-wrap line-clamp-2">{{ message.content }}</p>
+                      <p ng-if="message.content && message.type === 'text'" class="text-gray-100 leading-relaxed whitespace-pre-wrap line-clamp-2" render-mentions="parseMentions(message.content)"></p>
                     </div>
                   </div>
                 </div>
@@ -5706,7 +5707,7 @@
                       <!-- Message Text -->
                       <div class="mobile-message-text">
                         <p ng-if="message.deleted || message.is_deleted" class="text-gray-500 italic text-sm">This message was deleted</p>
-                        <p ng-if="!message.deleted && !message.is_deleted && message.content" class="text-gray-100 leading-relaxed whitespace-pre-wrap">{{ message.content }}</p>
+                        <p ng-if="!message.deleted && !message.is_deleted && message.content" class="text-gray-100 leading-relaxed whitespace-pre-wrap" render-mentions="parseMentions(message.content)"></p>
                       </div>
 
                       <!-- Deleted Media Message (Mobile) -->
@@ -5795,7 +5796,7 @@
                       <!-- Message Text -->
                       <div class="mobile-message-text">
                         <p ng-if="message.deleted || message.is_deleted" class="text-gray-500 italic text-sm">This message was deleted</p>
-                        <p ng-if="!message.deleted && !message.is_deleted && message.content" class="text-gray-100 leading-relaxed whitespace-pre-wrap">{{ message.content }}</p>
+                        <p ng-if="!message.deleted && !message.is_deleted && message.content" class="text-gray-100 leading-relaxed whitespace-pre-wrap" render-mentions="parseMentions(message.content)"></p>
                       </div>
 
                       <!-- Deleted Media Message (Mobile Continuation) -->
@@ -5941,6 +5942,7 @@
                   ng-model="messageInput"
                   ng-change="onMessageInput()"
                   ng-keydown="onMessageKeyDown($event)"
+                  ng-paste="handlePaste($event)"
                   placeholder="Type your message..."
                   class="mobile-input-field-new"
                   rows="1"
