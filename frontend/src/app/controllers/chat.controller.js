@@ -23,13 +23,14 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
   
   $scope.contacts = [];
   $scope.filteredContacts = [];
+  $scope.filteredChats = []; // Unified list of contacts and groups
   $scope.selectedContact = null;
   $scope.messages = [];
   $scope.messageInput = ''; // Initialize messageInput as empty string
   $scope.searchQuery = '';
   $scope.filter = 'all';
   $scope.groupFilter = 'all';
-  $scope.filteredGroups = [];
+  $scope.filteredGroups = []
   
   // Character limit functionality
   $scope.maxMessageLength = 250;
@@ -258,6 +259,9 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
       // Update the message input with proper cursor positioning
       $scope.messageInput = textBefore + emoji + textAfter;
       
+      // IMPORTANT: Also update the textarea's value directly
+      textarea.value = $scope.messageInput;
+      
       // Set cursor position after emoji and focus
       $timeout(function() {
         textarea.focus();
@@ -266,6 +270,9 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
         
         // Trigger input event to ensure proper binding
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Also trigger the onMessageInput handler to update character count, etc.
+        $scope.onMessageInput();
       }, 10);
     } else {
       // Fallback: just append to the end
@@ -276,8 +283,10 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
         const fallbackTextarea = document.querySelector('textarea[ng-model="messageInput"]') || 
                                  document.querySelector('.mobile-input-field');
         if (fallbackTextarea) {
+          fallbackTextarea.value = $scope.messageInput;
           fallbackTextarea.focus();
           fallbackTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+          $scope.onMessageInput();
         }
       }, 50);
     }
@@ -602,6 +611,79 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
 
   // localStorage key for unread counts
   $scope.UNREAD_STORAGE_KEY = 'vibgyorchat_unread_counts';
+  $scope.LAST_MESSAGE_TIMES_KEY = 'vibgyorchat_last_message_times';
+
+  // Save last message times for all chats to localStorage
+  $scope.saveLastMessageTimes = function() {
+    try {
+      const messageTimesData = {};
+      
+      // Save contact last message times
+      $scope.contacts.forEach(contact => {
+        const key = contact.email || contact.conversation_id;
+        if (contact.lastMessageTime) {
+          messageTimesData[key] = {
+            lastTime: contact.lastMessageTime,
+            lastContent: contact.lastMessageContent,
+            type: 'contact'
+          };
+        }
+      });
+      
+      // Save group last message times
+      $scope.groups.forEach(group => {
+        const key = group.conversation_id || group.id;
+        if (group.lastMessageTime) {
+          messageTimesData[key] = {
+            lastTime: group.lastMessageTime,
+            lastContent: group.lastMessageContent,
+            type: 'group'
+          };
+        }
+      });
+      
+      localStorage.setItem($scope.LAST_MESSAGE_TIMES_KEY, JSON.stringify(messageTimesData));
+      console.log('💾 Saved last message times to localStorage:', Object.keys(messageTimesData).length, 'chats');
+    } catch (error) {
+      console.error('❌ Failed to save last message times:', error);
+    }
+  };
+
+  // Load last message times from localStorage
+  $scope.loadLastMessageTimes = function() {
+    try {
+      const stored = localStorage.getItem($scope.LAST_MESSAGE_TIMES_KEY);
+      if (!stored) return;
+      
+      const messageTimesData = JSON.parse(stored);
+      console.log('📂 Loading last message times from localStorage:', Object.keys(messageTimesData).length, 'chats');
+      
+      // Restore contact last message times
+      $scope.contacts.forEach(contact => {
+        const key = contact.email || contact.conversation_id;
+        if (messageTimesData[key] && messageTimesData[key].type === 'contact') {
+          contact.lastMessageTime = new Date(messageTimesData[key].lastTime);
+          if (messageTimesData[key].lastContent) {
+            contact.lastMessageContent = messageTimesData[key].lastContent;
+          }
+        }
+      });
+      
+      // Restore group last message times
+      $scope.groups.forEach(group => {
+        const key = group.conversation_id || group.id;
+        if (messageTimesData[key] && messageTimesData[key].type === 'group') {
+          group.lastMessageTime = new Date(messageTimesData[key].lastTime);
+          if (messageTimesData[key].lastContent) {
+            group.lastMessageContent = messageTimesData[key].lastContent;
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Failed to load last message times:', error);
+    }
+  };
 
   // Save unread counts to localStorage
   $scope.saveUnreadCounts = function() {
@@ -866,22 +948,23 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
     if (user_status && user_status.should_notify) {
       console.log('🔔 Should show notification for conversation:', conversation_info.conversation_id);
       
-      // Find the contact by sender email/username
+      // Find the contact/group by conversation_id (NOT by sender!)
       let targetContact = null;
       
-      // Search in contacts
-      for (let contact of $scope.contacts) {
-        if (contact.email === data.sender || contact.username === data.sender) {
-          targetContact = contact;
-          break;
-        }
-      }
-      
-      // Search in groups if not found in contacts
-      if (!targetContact) {
+      // First, check if it's a group message
+      if (conversation_info.type === 'group') {
+        // Search in groups by conversation_id
         for (let group of $scope.groups) {
-          if (group.conversation_id === conversation_info.conversation_id) {
+          if (group.conversation_id === conversation_info.conversation_id || group.id === conversation_info.conversation_id) {
             targetContact = group;
+            break;
+          }
+        }
+      } else {
+        // For DM messages, search in contacts by conversation_id
+        for (let contact of $scope.contacts) {
+          if (contact.conversation_id === conversation_info.conversation_id) {
+            targetContact = contact;
             break;
           }
         }
@@ -1665,6 +1748,9 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
     return UserService.getContacts().then(function(contacts) {
       $scope.contacts = contacts;
       
+      // Load last message times from localStorage FIRST
+      $scope.loadLastMessageTimes();
+      
       // Load unread counts from localStorage after contacts are loaded
       $scope.loadUnreadCounts();
       
@@ -1672,8 +1758,17 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
       $scope.filterContacts($scope.filter);
       
       // Fetch last message for each contact
-      contacts.forEach(function(contact) {
-        $scope.fetchLastMessage(contact);
+      const fetchPromises = contacts.map(function(contact) {
+        return $scope.fetchLastMessage(contact);
+      });
+      
+      // Wait for all last messages to be fetched, then update the unified list
+      $q.all(fetchPromises).finally(function() {
+        // Re-apply filter to update unified list with correct message times
+        $scope.filterContacts($scope.filter);
+        // Save the updated times
+        $scope.saveLastMessageTimes();
+        $scope.$applyAsync();
       });
       
       // Fetch all presence statuses
@@ -1820,6 +1915,19 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
           const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
           return bTime - aTime;
         });
+        
+        // Create unified list combining contacts and groups, sorted by last message time
+        $scope.filteredChats = [...$scope.filteredContacts, ...$scope.filteredGroups].sort(function(a, b) {
+          // Pinned items always come first
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          
+          // Within pinned or non-pinned, sort by last message time (most recent first)
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
+        console.log('📋 Created unified filteredChats list:', $scope.filteredChats.length, 'items');
         break;
       case 'muted':
         $scope.filteredContacts = $scope.contacts.filter(c => c.muted && !c.archived).sort(function(a, b) {
@@ -1844,6 +1952,15 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
           return bTime - aTime;
         });
         $scope.archivedGroups = $scope.groups.filter(g => g.archived).sort(function(a, b) {
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
+        
+        // Create unified list for muted chats
+        $scope.filteredChats = [...$scope.filteredContacts, ...$scope.filteredGroups].sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
           const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
           const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
           return bTime - aTime;
@@ -1876,6 +1993,15 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
           const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
           return bTime - aTime;
         });
+        
+        // Create unified list for favorited chats
+        $scope.filteredChats = [...$scope.filteredContacts, ...$scope.filteredGroups].sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
         break;
       default:
         $scope.filteredContacts = $scope.contacts.filter(c => !c.archived).sort(function(a, b) {
@@ -1904,6 +2030,15 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
           const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
           return bTime - aTime;
         });
+        
+        // Create unified list for default case
+        $scope.filteredChats = [...$scope.filteredContacts, ...$scope.filteredGroups].sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
     }
   };
 
@@ -1924,9 +2059,45 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
           const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
           return bTime - aTime; // Descending order (newest first)
         });
+        
+        // Also update filteredContacts to ensure unified list is complete
+        $scope.filteredContacts = $scope.contacts.filter(c => !c.archived).sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
+        
+        // Create unified list
+        $scope.filteredChats = [...$scope.filteredContacts, ...$scope.filteredGroups].sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
         break;
       case 'muted':
         $scope.filteredGroups = $scope.groups.filter(g => g.muted && !g.archived).sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
+        
+        // Also update filteredContacts
+        $scope.filteredContacts = $scope.contacts.filter(c => c.muted && !c.archived).sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
+        
+        // Create unified list
+        $scope.filteredChats = [...$scope.filteredContacts, ...$scope.filteredGroups].sort(function(a, b) {
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
           const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
@@ -1942,9 +2113,45 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
           const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
           return bTime - aTime;
         });
+        
+        // Also update filteredContacts
+        $scope.filteredContacts = $scope.contacts.filter(c => c.favorited && !c.archived).sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
+        
+        // Create unified list
+        $scope.filteredChats = [...$scope.filteredContacts, ...$scope.filteredGroups].sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
         break;
       default:
         $scope.filteredGroups = $scope.groups.filter(g => !g.archived).sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
+        
+        // Also update filteredContacts
+        $scope.filteredContacts = $scope.contacts.filter(c => !c.archived).sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const bTime = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return bTime - aTime;
+        });
+        
+        // Create unified list
+        $scope.filteredChats = [...$scope.filteredContacts, ...$scope.filteredGroups].sort(function(a, b) {
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
           const aTime = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
@@ -2491,6 +2698,16 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
     $scope.closeMentionSuggestions();
     
     $scope.selectedContact = contact;
+    
+    // Force Angular to detect the change by creating a new reference
+    $timeout(function() {
+      $scope.selectedContact = angular.copy(contact);
+      // Ensure the profile picture is properly set
+      if ($scope.selectedContact && !$scope.selectedContact.profile_picture) {
+        $scope.selectedContact.profile_picture = '';
+      }
+    }, 0);
+    
     $scope.messages = [];
     $scope.loadingMessages = true;
     $scope.showPinnedMessages = false; // Reset pinned messages panel
@@ -2752,6 +2969,34 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
     }
 
     SocketService.sendTextMessage(ChatService.currentConversation.id, content, replyToId);
+    
+    // Immediately update the contact/group in sidebar to move it to top
+    const conversationId = ChatService.currentConversation.id;
+    const now = new Date().toISOString();
+    
+    // Find the contact or group
+    let contact = $scope.contacts.find(c => c.conversation_id === conversationId);
+    let isGroup = false;
+    
+    if (!contact) {
+      contact = $scope.groups.find(g => (g.conversation_id || g.id) === conversationId);
+      isGroup = true;
+    }
+    
+    if (contact) {
+      contact.lastMessageContent = content;
+      contact.lastMessageTime = now;
+      
+      // Re-sort immediately to move to top
+      if (isGroup) {
+        $scope.filterGroups($scope.groupFilter);
+      } else {
+        $scope.filterContacts($scope.filter);
+      }
+      
+      // Save to localStorage
+      $scope.saveLastMessageTimes();
+    }
     
     // Don't refresh messages immediately to prevent profile picture blinking
     $timeout(function() {
@@ -4891,25 +5136,33 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
       // Initialize archivedGroups array (will be populated by filter function)
       $scope.archivedGroups = [];
 
+      // Load last message times from localStorage FIRST
+      $scope.loadLastMessageTimes();
+
       // Load unread counts from localStorage after groups are loaded
       $scope.loadUnreadCounts();
       
       // Fetch last message for each group to ensure we have the latest
-      allGroups.forEach(function(group) {
-        $scope.fetchLastMessage(group);
+      const fetchPromises = allGroups.map(function(group) {
+        return $scope.fetchLastMessage(group);
+      });
+      
+      // Wait for all last messages to be fetched, then update the unified list
+      $q.all(fetchPromises).finally(function() {
+        // Apply current filter to separate archived groups and create unified list
+        if ($scope.sidebarView === 'chats') {
+          // If in chats view, use filterContacts which now handles both
+          $scope.filterContacts($scope.filter);
+        } else {
+          // If in groups view, use filterGroups
+          $scope.filterGroups($scope.groupFilter);
+        }
+        
+        // Save the updated times
+        $scope.saveLastMessageTimes();
+        $scope.$applyAsync();
       });
 
-      // Apply current filter to separate archived groups
-      if ($scope.sidebarView === 'chats') {
-        // If in chats view, use filterContacts which now handles both
-        $scope.filterContacts($scope.filter);
-      } else {
-        // If in groups view, use filterGroups
-        $scope.filterGroups($scope.groupFilter);
-      }
-
-      $scope.$applyAsync();
-      
       // Calculate total unread count after loading groups
       $timeout(function() {
         $scope.calculateTotalUnreadCount();
@@ -7338,6 +7591,10 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
   // Enhanced profile picture function with fallback
   $scope.getProfilePicture = function(profilePicture) {
     if (profilePicture && profilePicture !== '' && !profilePicture.includes('placeholder')) {
+      // If it's a filename (not a full URL), get it through UserService
+      if (!profilePicture.startsWith('http') && !profilePicture.startsWith('data:') && !profilePicture.startsWith('auth-image://')) {
+        return UserService.getProfilePicture(profilePicture);
+      }
       return profilePicture;
     }
     
@@ -7353,10 +7610,6 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
 
   $scope.isMessageFromMe = function(message) {
     return $scope.currentUser && message.sender_id === $scope.currentUser.id;
-  };
-
-  $scope.getProfilePicture = function(filename) {
-    return UserService.getProfilePicture(filename);
   };
 
   // Message rendering functions
@@ -8327,7 +8580,7 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
       // Check both contacts and groups
       let contact = $scope.contacts.find(c => c.conversation_id === message.conversation_id);
       if (!contact) {
-        contact = $scope.groups.find(g => g.id === message.conversation_id);
+        contact = $scope.groups.find(g => (g.conversation_id || g.id) === message.conversation_id);
       }
       
       if (contact) {
@@ -8343,25 +8596,41 @@ angular.module('vibgyorChat').controller('ChatController', ['$scope', '$rootScop
     }
     
     // Update last message for the contact/group in the sidebar
+    console.log('🔍 Updating sidebar for message.conversation_id:', message.conversation_id);
     let contact = $scope.contacts.find(c => c.conversation_id === message.conversation_id);
     let isGroup = false;
+    console.log('🔍 Found in contacts?', !!contact);
     if (!contact) {
-      contact = $scope.groups.find(g => g.id === message.conversation_id);
+      console.log('🔍 Searching in groups. Total groups:', $scope.groups.length);
+      $scope.groups.forEach(g => {
+        console.log('  Group:', g.name, 'conversation_id:', g.conversation_id, 'id:', g.id);
+      });
+      contact = $scope.groups.find(g => (g.conversation_id || g.id) === message.conversation_id);
       isGroup = true;
+      console.log('🔍 Found in groups?', !!contact, 'Group name:', contact ? contact.name : 'N/A');
     }
     
     if (contact) {
+      console.log('✅ Updating contact/group:', contact.name || contact.username, 'isGroup:', isGroup);
       $timeout(function() {
         contact.lastMessageContent = message.content || (message.type === 'image' ? '📷 Image' : message.type === 'file' ? '📎 File' : 'Message');
         contact.lastMessageTime = message.created_at;
+        console.log('✅ Updated lastMessageTime to:', contact.lastMessageTime);
         
         // Re-sort to move this conversation to the top (WhatsApp style)
         if (isGroup) {
+          console.log('✅ Calling filterGroups to re-sort');
           $scope.filterGroups($scope.groupFilter);
         } else {
+          console.log('✅ Calling filterContacts to re-sort');
           $scope.filterContacts($scope.filter);
         }
+        
+        // Save to localStorage
+        $scope.saveLastMessageTimes();
       });
+    } else {
+      console.log('❌ Contact/group not found for conversation_id:', message.conversation_id);
     }
   });
 
